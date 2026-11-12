@@ -1,0 +1,63 @@
+import pytest
+from outreach import config
+from outreach.fake_x import FakeXClient
+from outreach import doctor
+
+
+def test_doctor_dm_test_blocks_stranger_and_does_not_send(conn, monkeypatch, capsys):
+    """doctor --dm-test must reject usernames not in SEND_ALLOWLIST, send nothing, and return non-zero code."""
+    monkeypatch.setattr(config, "SEND_ALLOWLIST", ["allowed_user"])
+    fake_x = FakeXClient(conn)
+
+    exit_code = doctor.run_doctor(["--dm-test", "unauthorized_stranger"], conn=conn, x=fake_x)
+
+    captured = capsys.readouterr()
+    assert exit_code != 0
+    assert "SEND_ALLOWLIST" in captured.out or "SEND_ALLOWLIST" in captured.err
+    assert len(fake_x.sent) == 0
+
+
+def test_doctor_dm_test_allows_user_case_insensitive_and_strips_at(conn, monkeypatch, capsys):
+    """doctor --dm-test matches allowlist case-insensitively and strips leading @."""
+    monkeypatch.setattr(config, "SEND_ALLOWLIST", ["alex_builder"])
+    fake_x = FakeXClient(conn)
+
+    exit_code = doctor.run_doctor(["--dm-test", "@ALEX_BUILDER"], conn=conn, x=fake_x)
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "PASS" in captured.out
+    assert len(fake_x.sent) == 1
+    assert fake_x.sent[0][0] == "1001"  # alex_builder user ID in FakeXClient
+
+
+def test_doctor_spend_option(conn, capsys):
+    """doctor --spend executes a 10-result search and prints post/user counts and estimated cost."""
+    fake_x = FakeXClient(conn)
+
+    exit_code = doctor.run_doctor(["--spend"], conn=conn, x=fake_x)
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "PASS" in captured.out
+    assert "Estimated cost" in captured.out
+
+
+def test_doctor_check_reply_finds_reply(conn, capsys):
+    """doctor --check-reply detects replies in conversation history."""
+    fake_x = FakeXClient(conn)
+    fake_x.inbox.append(
+        {
+            "id": "reply_1",
+            "sender_id": "1001",
+            "text": "Hello, got your message!",
+            "created_at": "2026-11-12T05:00:00Z",
+            "dm_conversation_id": "conv_1001",
+        }
+    )
+
+    exit_code = doctor.run_doctor(["--check-reply", "alex_builder"], conn=conn, x=fake_x)
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "PASS: Found reply" in captured.out
