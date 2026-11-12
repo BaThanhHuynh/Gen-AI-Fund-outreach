@@ -41,5 +41,10 @@ MIN_QUOTE_CHARS: int = 15
 # OAuth 2.0 scopes
 SCOPES: str = "tweet.read users.read follows.read dm.read dm.write offline.access"
 
-# SQLite database file path based on X_MODE
-DB_PATH: str = "data/fake.db" if X_MODE == "fake" else "data/outreach.db"
+# Project root directory
+PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
+
+# SQLite database file path based on X_MODE, anchored to project root
+_db_filename = "fake.db" if X_MODE == "fake" else "outreach.db"
+DB_PATH: str = str(PROJECT_ROOT / "data" / _db_filename)
+
