@@ -248,7 +248,7 @@ ANTHROPIC_API_KEY=          # only for LLM_PROVIDER=anthropic
 LLM_MODEL=claude-fable-5-2
 LLM_PRICE_IN=0              # USD per million input tokens — copy from Anthropic's pricing page
 LLM_PRICE_OUT=0
-SEND_MODE=allowlist         # allowlist: only SEND_ALLOWLIST can be contacted · live: any approved prospect
+SEND_MODE=allowlist         # allowlist: only SEND_ALLOWLIST can be contacted · live: any approved prospect (manual channel only; the API channel is always limited to SEND_ALLOWLIST)
 SEND_ALLOWLIST=             # comma-separated X usernames
 DAILY_SEND_CAP=20
 ```
@@ -290,6 +290,9 @@ Mỗi mục ghi một dòng vào phần «what comes next» của bài viết:
 - **Hồ sơ người thật chỉ gửi tới mô hình trên máy (Ollama) hoặc API có trả tiền (Anthropic).** Không gửi tới
   dịch vụ mô hình miễn phí trên mây.
 - **Trong lúc phát triển:** `SEND_MODE` luôn là `allowlist`, danh sách chỉ chứa tài khoản B của chính mình.
+- **Kênh API chỉ gửi cho người trong `SEND_ALLOWLIST`, kể cả khi `SEND_MODE=live`.** Luật tự động hoá của X (mục
+  II.C) cấm gửi DM tự động cho người chưa chủ động xin liên lạc, dù có người duyệt từng tin. `SEND_MODE=live` chỉ
+  mở kênh tay. Nguồn: `docs/bao_cao/gd-0.md`.
 - Tên mô hình Anthropic giữ đúng `claude-fable-5-2` (đổi qua `LLM_MODEL`). Không thay bằng tên mô hình cũ.
 - Trước khi viết mã cho một lời gọi API, mở trang tài liệu hiện hành của lời gọi đó. Tài liệu khác tệp này
   thì làm theo tài liệu và ghi vào mục «Lệch so với kế hoạch».
@@ -694,7 +697,8 @@ Luật:
   - `'not_sent'` → `approved`, xoá `claimed_at` và `channel`.
   - `'existing'` → `blocked`, lỗi `"existing conversation"`.
 - **`send_api`:**
-  1. `check_can_send` → `claim(…, 'api')` (commit).
+  1. `x_username` (casefold) ngoài `SEND_ALLOWLIST` → `SendBlocked("api channel is limited to SEND_ALLOWLIST
+     (X automation rules)")`, **ở mọi `SEND_MODE`**, trước khi claim. Rồi `check_can_send` → `claim(…, 'api')` (commit).
   2. Chưa có `x_user_id` thì gọi `users_by_usernames` và lưu `x_user_id`, `can_dm`. Không tìm thấy, hoặc
      `can_dm=0`, thì `blocked`.
   3. `dm_events_with(id, 1)`: có sự kiện → `blocked` `"existing conversation"`. Bước kiểm này lỗi → trả về
@@ -717,6 +721,8 @@ Luật:
   - `test_confirm_requires_manual_sending_state`
   - `test_daily_cap_blocks` — trần 2, đã có 2 tin trong 24 giờ → lý do chứa `"daily cap"`.
   - `test_allowlist_blocks_strangers_case_insensitive` — áp cho cả `open_manual` và `send_api`.
+  - `test_api_channel_requires_allowlist_even_when_live` — `SEND_MODE=live`, người ngoài danh sách: `send_api` →
+    `SendBlocked` chứa `"api channel"`, `len(x.sent) == 0`, status vẫn `approved`; `open_manual` cùng người → được mở.
   - `test_do_not_contact_blocks`
   - `test_api_send_happy_path` — tra `x_user_id`, `approved → sent`, có `dm_event_id`, `len(x.sent) == 1`.
   - `test_api_prior_conversation_blocks` — `x.inbox` có sự kiện với người đó → `blocked`, `len(x.sent) == 0`.
@@ -729,9 +735,9 @@ Luật:
   - `test_resolve_unknown` — `was_sent=True → sent`; `False → failed`.
   - `test_mark_replied_and_handled`
   - `test_needs_attention_contents` — đủ các loại; sau `mark_handled` thì mục đó biến mất.
-- [ ] **5.2** Viết `sender.py` cho test qua. `pytest -q` → **107 passed**. Commit.
+- [ ] **5.2** Viết `sender.py` cho test qua; sửa chú thích `SEND_MODE` trong `.env.example` cho khớp mục 3. `pytest -q` → **108 passed**. Commit.
 
-**Xong khi:** 107 test qua.
+**Xong khi:** 108 test qua.
 
 ---
 
@@ -784,11 +790,11 @@ Luật:
 - [ ] **6.1** Viết `tests/test_app_smoke.py`, chạy thấy hỏng:
   - `test_app_runs_in_fake_mode` — `AppTest.from_file("app.py").run(timeout=30)`; `not at.exception`;
     `len(at.tabs) == 4`.
-- [ ] **6.2** Viết `app.py`. `pytest -q` → **108 passed**. Commit.
+- [ ] **6.2** Viết `app.py`. `pytest -q` → **109 passed**. Commit.
 - [ ] **6.3** Tự đi hết luồng ở `X_MODE=fake`: tìm → chấm → soạn → duyệt → Start → I sent it → Mark replied →
       Mark handled. Chụp một ảnh mỗi tab, đặt vào `docs/bao_cao/` và trỏ tới trong báo cáo.
 
-**Xong khi:** 108 test qua; đi hết luồng ở chế độ giả lập không gặp lỗi.
+**Xong khi:** 109 test qua; đi hết luồng ở chế độ giả lập không gặp lỗi.
 
 ---
 
@@ -810,7 +816,8 @@ Luật:
   - tuỳ chọn có trả tiền: kênh X API (credit X, quyền App, «tested with mocks only») và Claude;
   - cài đặt đánh số từng bước;
   - dùng thử không cần khoá (`X_MODE=fake`);
-  - chuyển sang liên hệ thật (`SEND_MODE=live`) và ý nghĩa của việc đó;
+  - chuyển sang liên hệ thật (`SEND_MODE=live`) và ý nghĩa của việc đó — chỉ áp cho kênh tay; kênh API luôn chỉ
+    gửi trong `SEND_ALLOWLIST` theo luật X;
   - bảng «giới hạn và hành động bị chặn» (lý do hiện ra → cách gỡ);
   - xử lý sự cố;
   - dữ liệu lưu ở đâu: chỉ trong tệp SQLite trên máy.
