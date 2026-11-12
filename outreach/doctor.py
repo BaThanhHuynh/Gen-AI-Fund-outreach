@@ -31,9 +31,13 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
     if config.X_MODE == "real":
         required_keys.extend(["X_CLIENT_ID", "X_CLIENT_SECRET", "ANTHROPIC_API_KEY"])
 
-    missing = [k for k in required_keys if not os.getenv(k)]
+    env_path = config.PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        print("  WARN: Local .env file does not exist yet (falling back to default config)")
+
+    missing = [k for k in required_keys if os.getenv(k) is None and getattr(config, k, None) is None]
     if missing:
-        print(f"  FAIL: Missing required keys in .env: {', '.join(missing)}")
+        print(f"  FAIL: Missing required configuration keys: {', '.join(missing)}")
         has_failure = True
     else:
         print("  PASS: Core environment variables are configured (secrets kept hidden)")

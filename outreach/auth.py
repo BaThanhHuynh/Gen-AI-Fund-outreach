@@ -100,6 +100,21 @@ def login(conn: sqlite3.Connection, timeout_s: int = 120) -> dict[str, str]:
     Interactive OAuth 2.0 PKCE login via local browser.
     Listens only on 127.0.0.1 and suppresses request logging to avoid leaking auth code.
     """
+    # When running in fake mode, simulate instantaneous local authentication with 0 cost
+    if config.X_MODE == "fake":
+        tokens = {
+            "access_token": "fake_access_token_demo",
+            "refresh_token": "fake_refresh_token_demo",
+            "expires_at": time.time() + 86400,
+            "scope": config.SCOPES,
+        }
+        kv_set(conn, "oauth", tokens)
+        me_data = {"id": "999999", "username": "genaifund_test"}
+        kv_set(conn, "me", me_data)
+        print("\n[SAMPLE DATA / FAKE MODE] Authenticated with simulated X account.")
+        print(f"Connected as @{me_data['username']} (ID: {me_data['id']})\n")
+        return me_data
+
     state = secrets.token_urlsafe(32)
     verifier, challenge = generate_pkce_pair()
     kv_set(conn, "pkce", {"state": state, "code_verifier": verifier})
@@ -147,3 +162,10 @@ def login(conn: sqlite3.Connection, timeout_s: int = 120) -> dict[str, str]:
     if not me_data:
         raise AuthError("Failed to fetch user profile after authentication")
     return me_data
+
+
+if __name__ == "__main__":
+    from outreach.db import connect
+    conn = connect()
+    login(conn)
+
