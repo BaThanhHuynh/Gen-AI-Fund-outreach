@@ -32,8 +32,8 @@ def conn():
 
 @pytest.fixture
 def file_db(tmp_path: Path):
-    """Path to a temporary SQLite database file for multi-connection tests."""
-    db_path = str(tmp_path / "test.db")
+    """Path to a temporary SQLite database file in a nonexistent subfolder."""
+    db_path = str(tmp_path / "sub" / "test.db")
     return db_path
 
 
