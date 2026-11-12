@@ -60,3 +60,21 @@ def test_doctor_manual_channel_skips_x_check(conn, monkeypatch, capsys):
     assert "Manual send channel (no X API credentials required)" in captured.out
 
 
+
+
+def test_doctor_fails_on_bad_github_token(conn, monkeypatch, capsys):
+    """In X_MODE=real, doctor must report a rejected GitHub token as FAIL and return non-zero."""
+    from outreach.github import GitHubAuthError
+    monkeypatch.setattr(config, "X_MODE", "real")
+    monkeypatch.setattr(config, "GITHUB_TOKEN", "bad")
+
+    class BadGitHub:
+        def rate_limit(self):
+            raise GitHubAuthError(401, "Bad credentials")
+
+    exit_code = doctor.run_doctor([], conn=conn, x=FakeXClient(conn), gh=BadGitHub())
+
+    out = capsys.readouterr().out
+    assert exit_code == 1
+    assert "FAIL" in out
+    assert "GitHub" in out
