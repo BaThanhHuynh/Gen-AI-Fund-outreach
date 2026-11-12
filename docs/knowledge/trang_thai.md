@@ -5,7 +5,8 @@ Cập nhật: 2026-11-12 (Claude rà soát Giai đoạn 2b: đạt, gắn gd-2-o
 - Đề bài: `docs/assignment.md`
 - Quy trình và thiết kế: `docs/quy_trinh_trien_khai.md`
 - Báo cáo từng giai đoạn: `docs/bao_cao/gd-N.md` · kết luận rà soát: `docs/bao_cao/gd-N-ra-soat.md`
-- Vai trò: Antigravity viết mã và test; Claude rà soát sau mỗi giai đoạn.
+- Vai trò: GĐ1–2b do Antigravity viết, Claude rà soát. **Từ GĐ3 (người dùng đổi ngày 13/11/2026): Claude tự
+  làm hết GĐ3 → GĐ7.** Việc chỉ người làm được (bấm gửi DM ở 7.1, quay video, gửi thư nộp bài) giao lại người dùng.
 - Nghiên cứu đường 0 USD (dữ liệu thật, người thật) và hướng đi đã duyệt: `docs/knowledge/nghien-cuu-0-usd.md`
 - Nhật ký phiên: `docs/knowledge/nhat_ky/` (chỉ mục: `CHI_MUC.md`)
 
@@ -22,7 +23,7 @@ Cập nhật: 2026-11-12 (Claude rà soát Giai đoạn 2b: đạt, gắn gd-2-o
 | 1 — Khung dự án và cơ sở dữ liệu | **đạt** sau rà soát vòng 3 — xem `docs/bao_cao/gd-1-ra-soat.md` | gd-1, gd-1-ok |
 | 2 — Kết nối X (kênh API tuỳ chọn) | **đạt** sau 2b (bước 2.4 bỏ) — xem `docs/bao_cao/gd-2-ra-soat.md` | gd-2, gd-2-ok |
 | 2b — Sửa sau rà soát, đổi khoá hồ sơ, cấu hình mới | **đạt** (rà soát vòng 2); 1 mục sửa kèm ở đầu GĐ3 | gd-2b, gd-2-ok |
-| 3 — Tìm người qua GitHub | **việc tiếp theo** của Antigravity | — |
+| 3 — Tìm người qua GitHub | **việc tiếp theo** — Claude làm (kế hoạch GĐ3 của Antigravity đã duyệt kèm 2 điều kiện, xem `docs/knowledge/nhat_ky/2026-11-12.md`) | — |
 | 4 — Chấm điểm, soạn tin, kiểm bằng chứng | chưa bắt đầu | — |
 | 5 — Gửi và theo dõi | chưa bắt đầu | — |
 | 6 — Giao diện | chưa bắt đầu | — |
