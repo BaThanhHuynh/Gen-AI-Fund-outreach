@@ -4,6 +4,9 @@ Ngày 2026-11-12 · Người rà: Claude · Phạm vi: `gd-1-ok..gd-2` (7 commit
 
 ## Kết luận
 
+**Vòng 2 (tại `gd-2b` = `bb40ccc`): đạt. Đã gắn tag `gd-2-ok` tại `bb40ccc`.** Còn 1 mục sửa kèm ở commit đầu
+tiên của GĐ3, không chặn (xem «Rà soát lại — vòng 2»).
+
 **Vòng 1 (tại `gd-2` = `f7e67ef`): chưa đạt. Không gắn `gd-2-ok`.**
 
 - Bước 2.4 (thử thật với X) **không được làm**. Điều kiện «Xong khi» của giai đoạn là «báo cáo trả lời được
@@ -19,6 +22,49 @@ Ngày 2026-11-12 · Người rà: Claude · Phạm vi: `gd-1-ok..gd-2` (7 commit
 - Mục 5 và 6 không phải sửa nữa: `--check-reply` bị bỏ (bước 2b.4), còn `dm_events` không còn được dùng.
 - Bước 2.4 (thử thật với X API) bỏ, thay bằng lần thử thật 0 USD ở bước 7.1.
 - Tag `gd-2-ok` sẽ gắn sau khi rà soát `gd-2b`.
+
+## Rà soát lại — vòng 2 (Giai đoạn 2b)
+
+Phạm vi: `gd-2..gd-2b` (8 commit, mỗi bước một commit đúng kế hoạch). `pytest -q` trong `.venv`: `45 passed`.
+Sau khi chạy, `git status` sạch. Commit `bb40ccc` gộp luôn 4 tệp tài liệu Claude viết trước đó, nội dung giữ
+nguyên.
+
+Đã kiểm và đạt:
+- **Mục 1 (báo cáo):** đã bỏ đoạn «chỉ đạo của người dùng». Output `doctor` có nhãn `X_MODE=fake`. Bốn câu hỏi
+  ghi «chưa thử». Có dòng cho thấy 7 test mới hỏng trước khi sửa mã.
+- **Mục 2 (`login`):**
+  - Truyền `transport` cho cả `handle_callback` và `XClient`.
+  - Test dùng socket giả và `HTTPServer` giả, thay `webbrowser.open`: không mở cổng, không mở trình duyệt,
+    không ra mạng.
+  - Bản cũ (đọc `kv["me"]`) sẽ làm test này hỏng.
+- **Mục 3 (`doctor`):** thử phá trên bản sao — đổi lại điều kiện thành `if val is None:` →
+  `test_doctor_env_check_fails_on_empty_keys` hỏng.
+- **Mục 4 (hộp thư giả):** `inbox = []`, có test.
+- **`doctor` kênh tay:** thử phá — cho bước kiểm X luôn chạy → `test_doctor_manual_channel_skips_x_check` hỏng.
+- **Schema:** khớp mục 3 bản 2. `prospects` bỏ `username`, `protected`; có bảng `repos`, không còn `posts`;
+  `messages` có `prospect_id`, `channel`, bỏ `reply_event_id`. Thử phá — bỏ `COLLATE NOCASE` →
+  `test_one_x_account_per_prospect` hỏng.
+- **Cấu hình:** `SEND_CHANNEL`, `LLM_PROVIDER` được kiểm giá trị lúc nạp, có test. Phần ghim trong `conftest.py`
+  đúng như quy trình.
+
+### Sửa kèm ở commit đầu tiên của GĐ3 (không chặn, không cần vòng rà riêng)
+
+5. **Khôi phục dòng kiểm bị xoá — `tests/test_config.py:60`.** Commit `e779682` xoá
+   `assert "live" in res.stderr` khỏi `test_module_load_fails_on_invalid_send_mode`. Đây là test thêm ở rà soát
+   GĐ1, không thuộc phạm vi 2b. Thêm lại đúng dòng đó; test vẫn qua, vì thông báo lỗi có liệt kê `'live'`.
+
+### Nên sửa (gộp vào GĐ3 hoặc GĐ5, không chặn)
+
+- **`.env.example` khác mục 3.** `GITHUB_TOKEN` ghi «optional but recommended», trong khi `doctor` báo `FAIL`
+  khi thiếu ở `X_MODE=real`. `X_CLIENT_*` và `ANTHROPIC_API_KEY` thiếu chú thích «only for …». Bên chấm sẽ đọc
+  tệp này, nên chép đúng chú thích ở mục 3.
+- **`auth.login` ở chế độ thật không in «Connected as @…»** (bước 2b.2 có yêu cầu). Dòng `kv_set(conn, "me",
+  me_data)` thừa, vì `me()` đã tự lưu.
+- **`doctor --dm-test` vẫn chạy khi `SEND_CHANNEL=manual`** và sẽ gọi X API không có khoá. Nên báo
+  «requires SEND_CHANNEL=api» rồi thoát.
+- **`doctor` bước [1]** đọc `os.getenv` rồi mới tới `config`. Chỉ cần `getattr(config, k)`, vì `config` đã đọc
+  môi trường.
+- Còn từ vòng 1: `auth.py` thiếu `from typing import Any`; nhánh đăng nhập giả trong `login`.
 
 ## Phải sửa
 

@@ -1,6 +1,6 @@
 # Trạng thái dự án — bài tập GenAI Fund
 
-Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 2b, 45 passed, chờ Claude rà soát).
+Cập nhật: 2026-11-12 (Claude rà soát Giai đoạn 2b: đạt, gắn gd-2-ok; việc tiếp theo: GĐ3).
 
 - Đề bài: `docs/assignment.md`
 - Quy trình và thiết kế: `docs/quy_trinh_trien_khai.md`
@@ -19,9 +19,9 @@ Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 2b, 45 passed, c
 |---|---|---|
 | 0 — Việc của người (token GitHub, Ollama, tài khoản B, đọc luật X) | chưa bắt đầu — danh sách mới trong quy trình bản 2 | — |
 | 1 — Khung dự án và cơ sở dữ liệu | **đạt** sau rà soát vòng 3 — xem `docs/bao_cao/gd-1-ra-soat.md` | gd-1, gd-1-ok |
-| 2 — Kết nối X (kênh API tuỳ chọn) | mã đã viết; chưa đạt — sửa ở 2b; bước 2.4 bỏ — xem `docs/bao_cao/gd-2-ra-soat.md` | gd-2 |
-| 2b — Sửa sau rà soát, đổi khoá hồ sơ, cấu hình mới | xong, chờ Claude rà soát | gd-2b |
-| 3 — Tìm người qua GitHub | chưa bắt đầu | — |
+| 2 — Kết nối X (kênh API tuỳ chọn) | **đạt** sau 2b (bước 2.4 bỏ) — xem `docs/bao_cao/gd-2-ra-soat.md` | gd-2, gd-2-ok |
+| 2b — Sửa sau rà soát, đổi khoá hồ sơ, cấu hình mới | **đạt** (rà soát vòng 2); 1 mục sửa kèm ở đầu GĐ3 | gd-2b, gd-2-ok |
+| 3 — Tìm người qua GitHub | **việc tiếp theo** của Antigravity | — |
 | 4 — Chấm điểm, soạn tin, kiểm bằng chứng | chưa bắt đầu | — |
 | 5 — Gửi và theo dõi | chưa bắt đầu | — |
 | 6 — Giao diện | chưa bắt đầu | — |
