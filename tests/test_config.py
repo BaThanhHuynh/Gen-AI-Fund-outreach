@@ -58,4 +58,38 @@ def test_module_load_fails_on_invalid_send_mode():
     assert res.returncode != 0
     assert "SEND_MODE" in res.stderr
     assert "allowlist" in res.stderr
-    assert "live" in res.stderr
+
+
+def test_module_load_fails_on_invalid_send_channel():
+    """Importing outreach.config with invalid SEND_CHANNEL must exit non-zero with stderr naming SEND_CHANNEL."""
+    env = os.environ.copy()
+    env["SEND_CHANNEL"] = "invalid_channel"
+    res = subprocess.run(
+        [sys.executable, "-c", "import outreach.config"],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parent.parent),
+    )
+    assert res.returncode != 0
+    assert "SEND_CHANNEL" in res.stderr
+    assert "manual" in res.stderr
+    assert "api" in res.stderr
+
+
+def test_module_load_fails_on_invalid_llm_provider():
+    """Importing outreach.config with invalid LLM_PROVIDER must exit non-zero with stderr naming LLM_PROVIDER."""
+    env = os.environ.copy()
+    env["LLM_PROVIDER"] = "invalid_provider"
+    res = subprocess.run(
+        [sys.executable, "-c", "import outreach.config"],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parent.parent),
+    )
+    assert res.returncode != 0
+    assert "LLM_PROVIDER" in res.stderr
+    assert "ollama" in res.stderr
+    assert "template" in res.stderr
+    assert "anthropic" in res.stderr

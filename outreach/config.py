@@ -32,11 +32,42 @@ X_CLIENT_ID: str = os.getenv("X_CLIENT_ID", "")
 X_CLIENT_SECRET: str = os.getenv("X_CLIENT_SECRET", "")
 X_REDIRECT_URI: str = os.getenv("X_REDIRECT_URI", "http://127.0.0.1:8765/callback")
 
+# GitHub settings
+GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "").strip()
+
+# Sending channel: manual ($0) or api (X API)
+SEND_CHANNEL: str = validate_choice(
+    "SEND_CHANNEL", os.getenv("SEND_CHANNEL", "manual"), ("manual", "api")
+)
+
 # LLM settings
+LLM_PROVIDER: str = validate_choice(
+    "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "ollama"), ("ollama", "template", "anthropic")
+)
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3:4b").strip()
+OLLAMA_URL: str = "http://127.0.0.1:11434"
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 LLM_MODEL: str = os.getenv("LLM_MODEL", "claude-fable-5-2")
 LLM_PRICE_IN: float = parse_float_env("LLM_PRICE_IN", os.getenv("LLM_PRICE_IN", "0"))
 LLM_PRICE_OUT: float = parse_float_env("LLM_PRICE_OUT", os.getenv("LLM_PRICE_OUT", "0"))
+
+# Scoring and target criteria
+MIN_SCORE: int = 40
+SEA_LOCATIONS: list[str] = [
+    "Vietnam",
+    "Viet Nam",
+    "Ho Chi Minh",
+    "Hanoi",
+    "Singapore",
+    "Thailand",
+    "Bangkok",
+    "Indonesia",
+    "Jakarta",
+    "Malaysia",
+    "Kuala Lumpur",
+    "Philippines",
+    "Manila",
+]
 
 # Sending safety controls
 SEND_MODE: str = validate_choice(
