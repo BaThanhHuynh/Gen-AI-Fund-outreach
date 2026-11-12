@@ -83,3 +83,23 @@ def test_doctor_fails_on_bad_github_token(conn, monkeypatch, capsys):
     assert exit_code == 1
     assert "FAIL: GitHub rejected GITHUB_TOKEN" in out
     assert "github.com/settings/tokens" in out
+
+
+def test_doctor_fails_when_ollama_model_missing(conn, monkeypatch, capsys):
+    """LLM_PROVIDER=ollama: a running Ollama without OLLAMA_MODEL is FAIL with the pull command."""
+    import httpx
+    monkeypatch.setattr(config, "LLM_PROVIDER", "ollama")
+    monkeypatch.setattr(config, "OLLAMA_MODEL", "qwen3:4b")
+
+    def handler(request):
+        assert request.url.path == "/api/tags"
+        return httpx.Response(200, json={"models": [{"name": "llama3:8b", "model": "llama3:8b"}]})
+
+    exit_code = doctor.run_doctor([], conn=conn, x=FakeXClient(conn),
+                                  ollama_transport=httpx.MockTransport(handler))
+
+    out = capsys.readouterr().out
+    assert exit_code == 1
+    assert "FAIL" in out
+    assert "FAIL: Model qwen3:4b is not installed" in out
+    assert "ollama pull qwen3:4b" in out
