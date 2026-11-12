@@ -120,3 +120,32 @@ def test_discovery_stops_at_max_people(conn, cid):
     res = discover.discover_by_segment(conn, gh, cid, ["robotics"], max_people=3)
     assert res["new"] == 3
     assert conn.execute("SELECT COUNT(*) FROM prospects").fetchone()[0] == 3
+
+
+def test_rate_limit_mid_run_keeps_saved_people(conn, cid):
+    from outreach.github import GitHubRateLimited
+
+    class LimitedAfterTwo(FakeGitHub):
+        calls = 0
+
+        def user(self, login):
+            self.calls += 1
+            if self.calls == 3:
+                raise GitHubRateLimited(403, "rate limited", 1700000000)
+            return super().user(login)
+
+    gh = LimitedAfterTwo(users={f"user{i}": person(i, x=f"x{i}", with_repo=True) for i in (1, 2, 3)})
+    with pytest.raises(GitHubRateLimited):
+        discover.discover_by_segment(conn, gh, cid, ["robotics"])
+    assert conn.execute("SELECT COUNT(*) FROM prospects").fetchone()[0] == 2
+    assert conn.execute("SELECT COUNT(*) FROM repos").fetchone()[0] == 2
+
+
+def test_repo_already_saved_for_someone_else_counts_existing(conn, cid):
+    """A clash on repos.source_id (renamed login, or two runs at once) must not abort the run."""
+    a, b, c = person(1, x="xa", with_repo=True), person(2, x="xb", with_repo=True), person(3, x="xc")
+    b["repos"] = [dict(a["repos"][0])]          # same source_id as a's repo
+    gh = fake({"user1": a, "user2": b, "user3": c})
+    res = discover.discover_by_segment(conn, gh, cid, ["robotics"])
+    assert res == {"new": 2, "existing": 1, "no_x_handle": 0, "checked": 3}
+    assert {r[0] for r in conn.execute("SELECT id FROM prospects")} == {"gh:1", "gh:3"}

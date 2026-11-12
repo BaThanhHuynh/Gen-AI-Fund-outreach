@@ -33,22 +33,25 @@ def _store(conn: sqlite3.Connection, gh, campaign_id: int, login: str, source: s
     if known:
         return "existing"
     repos = gh.repos(login, limit=5)
-    with conn:
-        conn.execute(
-            """INSERT INTO prospects (id, github_login, x_username, name, bio, location,
-                   company, followers, campaign_id, source, fetched_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (prospect_id, u["login"], u["x_username"], u["name"], u["bio"], u["location"],
-             u["company"], u["followers"], campaign_id, source, now()),
-        )
-        for r in repos:
+    try:
+        with conn:
             conn.execute(
-                """INSERT INTO repos (source_id, prospect_id, name, description, topics,
-                       stars, pushed_at, url)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (r["source_id"], prospect_id, r["name"], r["description"],
-                 json.dumps(r["topics"]), r["stars"], r["pushed_at"], r["url"]),
+                """INSERT INTO prospects (id, github_login, x_username, name, bio, location,
+                       company, followers, campaign_id, source, fetched_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (prospect_id, u["login"], u["x_username"], u["name"], u["bio"], u["location"],
+                 u["company"], u["followers"], campaign_id, source, now()),
             )
+            for r in repos:
+                conn.execute(
+                    """INSERT INTO repos (source_id, prospect_id, name, description, topics,
+                           stars, pushed_at, url)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (r["source_id"], prospect_id, r["name"], r["description"],
+                     json.dumps(r["topics"]), r["stars"], r["pushed_at"], r["url"]),
+                )
+    except sqlite3.IntegrityError:   # saved meanwhile by another run, or a repo owned by a renamed login
+        return "existing"
     return "new"
 
 
