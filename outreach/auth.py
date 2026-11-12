@@ -95,7 +95,11 @@ def handle_callback(
     return tokens
 
 
-def login(conn: sqlite3.Connection, timeout_s: int = 120) -> dict[str, str]:
+def login(
+    conn: sqlite3.Connection,
+    timeout_s: int = 120,
+    transport: httpx.BaseTransport | None = None,
+) -> dict[str, str]:
     """
     Interactive OAuth 2.0 PKCE login via local browser.
     Listens only on 127.0.0.1 and suppresses request logging to avoid leaking auth code.
@@ -157,10 +161,10 @@ def login(conn: sqlite3.Connection, timeout_s: int = 120) -> dict[str, str]:
 
     # Format params dictionary
     flat_params = {k: v[0] if isinstance(v, list) and v else v for k, v in callback_params.items()}
-    handle_callback(conn, flat_params)
-    me_data = kv_get(conn, "me")
-    if not me_data:
-        raise AuthError("Failed to fetch user profile after authentication")
+    handle_callback(conn, flat_params, transport=transport)
+    client = XClient(conn, transport=transport)
+    me_data = client.me()
+    kv_set(conn, "me", me_data)
     return me_data
 
 

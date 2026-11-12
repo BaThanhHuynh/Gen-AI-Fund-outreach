@@ -1,5 +1,6 @@
 import base64
 import inspect
+import io
 import json
 import time
 from urllib.parse import parse_qs, urlparse
@@ -18,7 +19,7 @@ from outreach.xclient import (
     get_x,
 )
 from outreach.fake_x import FakeXClient
-from outreach.auth import build_authorize_url, handle_callback
+from outreach.auth import build_authorize_url, handle_callback, login
 
 
 def test_authorize_url_has_pkce_and_scopes():
@@ -90,6 +91,75 @@ def test_auth_callback_exchanges_code_for_tokens(conn, monkeypatch):
     assert saved is not None
     assert saved["access_token"] == "acc_token_1"
     assert saved["refresh_token"] == "ref_token_1"
+
+
+def test_login_fetches_and_returns_me(conn, monkeypatch):
+    """login() must exchange tokens, fetch me profile using transport, and persist me to kv."""
+    monkeypatch.setattr(config, "X_MODE", "real")
+    monkeypatch.setattr(config, "X_CLIENT_ID", "client_real")
+    monkeypatch.setattr(config, "X_CLIENT_SECRET", "secret_real")
+
+    # Monkeypatch webbrowser.open to ensure no browser is opened
+    browser_opened = []
+    monkeypatch.setattr("webbrowser.open", lambda url: browser_opened.append(url))
+
+    # Mock socket for BaseHTTPRequestHandler
+    class DummySocket:
+        def __init__(self, req_bytes: bytes):
+            self.r = io.BytesIO(req_bytes)
+            self.w = io.BytesIO()
+
+        def makefile(self, mode: str, *args, **kwargs):
+            return self.r if "b" in mode and "r" in mode else self.w
+
+        def sendall(self, data: bytes):
+            self.w.write(data)
+
+    # Mock HTTPServer to prevent binding port 8765
+    class MockHTTPServer:
+        def __init__(self, server_address, RequestHandlerClass):
+            self.server_address = server_address
+            self.RequestHandlerClass = RequestHandlerClass
+            self.timeout = 120
+
+        def handle_request(self):
+            pkce = kv_get(conn, "pkce")
+            state = pkce["state"]
+            raw = f"GET /callback?code=code_123&state={state} HTTP/1.1\r\nHost: 127.0.0.1:8765\r\n\r\n".encode("utf-8")
+            sock = DummySocket(raw)
+            self.RequestHandlerClass(sock, ("127.0.0.1", 54321), self)
+
+        def server_close(self):
+            pass
+
+    monkeypatch.setattr("outreach.auth.HTTPServer", MockHTTPServer)
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/2/oauth2/token":
+            return httpx.Response(
+                200,
+                json={
+                    "access_token": "acc_tok_99",
+                    "refresh_token": "ref_tok_99",
+                    "expires_in": 7200,
+                    "scope": config.SCOPES,
+                },
+            )
+        elif request.url.path == "/2/users/me":
+            return httpx.Response(
+                200,
+                json={"data": {"id": "42", "username": "alice"}},
+            )
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(mock_handler)
+    res = login(conn, transport=transport)
+
+    assert res == {"id": "42", "username": "alice"}
+    assert kv_get(conn, "me") == {"id": "42", "username": "alice"}
+    oauth = kv_get(conn, "oauth")
+    assert oauth["access_token"] == "acc_tok_99"
+    assert len(browser_opened) == 1
 
 
 def test_missing_oauth_token_raises_autherror(conn):
