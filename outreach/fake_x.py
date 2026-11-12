@@ -9,15 +9,7 @@ class FakeXClient:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
         self.sent: list[tuple[str, str]] = []
-        self.inbox: list[dict[str, Any]] = [
-            {
-                "id": "e_inbox_1001",
-                "sender_id": "1001",
-                "text": "Hi GenAI Fund team, thanks for reaching out! We'd love to chat about our embodied AI models.",
-                "created_at": "2026-11-12T04:00:00Z",
-                "dm_conversation_id": "fake_conv_1001",
-            }
-        ]
+        self.inbox: list[dict[str, Any]] = []
         self.fail_next: Exception | None = None
 
         # 6 sample users representing distinct user archetypes

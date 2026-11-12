@@ -777,3 +777,11 @@ def test_fake_client_simulates_operations(conn):
     with pytest.raises(Ambiguous):
         fake.send_dm("u1", "will fail")
     assert fake.fail_next is None
+
+
+def test_fake_inbox_starts_empty(conn):
+    """FakeXClient inbox must start empty to prevent false positive existing conversation."""
+    fake = FakeXClient(conn)
+    assert fake.inbox == []
+    assert fake.dm_events_with("1001", 1) == []
+
