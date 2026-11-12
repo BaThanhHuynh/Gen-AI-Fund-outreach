@@ -101,16 +101,19 @@ def test_writes_are_visible_to_second_connection(file_db):
     """kv_set and record_usage committed on connection A must be readable from connection B."""
     conn_a = connect(file_db)
     kv_set(conn_a, "shared_state", {"synced": True})
-    record_usage(conn_a, "post_read", 2)
 
-    # Keep conn_a open while opening conn_b to verify WAL and auto-commit visibility
+    # Read kv_get on conn_b BEFORE record_usage is called on conn_a
+    # This ensures conn.commit() in kv_set is strictly required and tested independently
     conn_b = connect(file_db)
     val = kv_get(conn_b, "shared_state")
+    assert val == {"synced": True}
+
+    # Now call record_usage on conn_a while conn_a is still open and verify visibility on conn_b
+    record_usage(conn_a, "post_read", 2)
     spend = spend_since(conn_b, "1970-01-01T00:00:00+00:00")
+    assert spend == pytest.approx(0.010)
 
     conn_a.close()
     conn_b.close()
 
-    assert val == {"synced": True}
-    assert spend == pytest.approx(0.010)
 
