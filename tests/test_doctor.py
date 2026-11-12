@@ -30,34 +30,3 @@ def test_doctor_dm_test_allows_user_case_insensitive_and_strips_at(conn, monkeyp
     assert len(fake_x.sent) == 1
     assert fake_x.sent[0][0] == "1001"  # alex_builder user ID in FakeXClient
 
-
-def test_doctor_spend_option(conn, capsys):
-    """doctor --spend executes a 10-result search and prints post/user counts and estimated cost."""
-    fake_x = FakeXClient(conn)
-
-    exit_code = doctor.run_doctor(["--spend"], conn=conn, x=fake_x)
-
-    captured = capsys.readouterr()
-    assert exit_code == 0
-    assert "PASS" in captured.out
-    assert "Estimated cost" in captured.out
-
-
-def test_doctor_check_reply_finds_reply(conn, capsys):
-    """doctor --check-reply detects replies in conversation history."""
-    fake_x = FakeXClient(conn)
-    fake_x.inbox.append(
-        {
-            "id": "reply_1",
-            "sender_id": "1001",
-            "text": "Hello, got your message!",
-            "created_at": "2026-11-12T05:00:00Z",
-            "dm_conversation_id": "conv_1001",
-        }
-    )
-
-    exit_code = doctor.run_doctor(["--check-reply", "alex_builder"], conn=conn, x=fake_x)
-
-    captured = capsys.readouterr()
-    assert exit_code == 0
-    assert "PASS: Found reply" in captured.out

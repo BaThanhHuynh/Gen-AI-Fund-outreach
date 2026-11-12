@@ -12,9 +12,7 @@ from outreach.xclient import AuthError, XClient, get_x
 def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | None = None, x: Any | None = None) -> int:
     """Run system diagnostic checks and tests, returning 0 on success or 1 on failure."""
     parser = argparse.ArgumentParser(description="GenAI Fund Outreach Diagnostic Tool")
-    parser.add_argument("--spend", action="store_true", help="Perform a 10-result search and report estimated cost")
     parser.add_argument("--dm-test", type=str, metavar="USERNAME", help="Send a test DM to an allowlisted user")
-    parser.add_argument("--check-reply", type=str, metavar="USERNAME", help="Check DM history for replies from a user")
     args = parser.parse_args(args_list)
 
     if conn is None:
@@ -72,23 +70,11 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
         else:
             print("  WARN: No stored scope metadata found in kv['oauth']")
 
-    # 4. Optional --spend check
-    if args.spend:
-        print("\n[4] Running spend estimation search (--spend)...")
-        try:
-            posts, users = x.search_recent("AI", max_results=10)
-            cost = len(posts) * config.PRICES["post_read"] + len(users) * config.PRICES["user_read"]
-            print(f"  PASS: Search retrieved {len(posts)} posts and {len(users)} users.")
-            print(f"  Estimated cost for this call: ${cost:.4f}")
-        except Exception as e:
-            print(f"  FAIL: Search failed: {e}")
-            has_failure = True
-
-    # 5. Optional --dm-test check
+    # 4. Optional --dm-test check
     if args.dm_test:
         raw_user = args.dm_test.strip()
         clean_user = raw_user.lstrip("@").lower()
-        print(f"\n[5] Executing test DM to @{clean_user} (--dm-test)...")
+        print(f"\n[4] Executing test DM to @{clean_user} (--dm-test)...")
 
         allowed = [u.lstrip("@").lower() for u in config.SEND_ALLOWLIST]
         if clean_user not in allowed:
@@ -112,29 +98,6 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
             print(f"  PASS: Successfully sent test DM to @{clean_user}. Event ID: {res['dm_event_id']}")
         except Exception as e:
             print(f"  FAIL: Could not send test DM: {e}")
-            return 1
-
-    # 6. Optional --check-reply check
-    if args.check_reply:
-        raw_user = args.check_reply.strip()
-        clean_user = raw_user.lstrip("@").lower()
-        print(f"\n[6] Checking conversation history for replies from @{clean_user} (--check-reply)...")
-        try:
-            users = x.users_by_usernames([clean_user])
-            if not users:
-                print(f"  FAIL: User @{clean_user} not found.")
-                return 1
-
-            user_id = users[0]["id"]
-            events = x.dm_events_with(user_id, max_results=20)
-            replies = [e for e in events if e.get("sender_id") == user_id]
-            if replies:
-                latest = replies[0]
-                print(f"  PASS: Found reply from @{clean_user}: \"{latest.get('text')}\" (at {latest.get('created_at')})")
-            else:
-                print(f"  INFO: No reply found yet from @{clean_user} (inspected {len(events)} events).")
-        except Exception as e:
-            print(f"  FAIL: Error checking replies: {e}")
             return 1
 
     print("\nDiagnostic complete.")
