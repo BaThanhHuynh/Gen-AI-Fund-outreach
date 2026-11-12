@@ -1,4 +1,5 @@
 import inspect
+import time
 
 import httpx
 import pytest
@@ -132,3 +133,40 @@ def test_fake_github_has_same_methods():
     for name in ["search_users", "user", "repos", "following"]:
         assert str(inspect.signature(getattr(FakeGitHub, name))) == \
             str(inspect.signature(getattr(GitHubClient, name)))
+
+
+def test_secondary_limit_uses_retry_after():
+    """Secondary limits send retry-after while the primary window still has calls left."""
+    def handler(req):
+        return httpx.Response(403, json={"message": "secondary rate limit"},
+                              headers={"retry-after": "60", "x-ratelimit-remaining": "25",
+                                       "x-ratelimit-reset": "1700000000"})
+
+    with pytest.raises(GitHubRateLimited) as e:
+        client(handler).search_users("q")
+    assert abs(e.value.reset_at - (time.time() + 60)) < 5
+
+
+def test_network_error_message_is_english_and_names_the_call():
+    def handler(req):
+        raise httpx.ReadTimeout("", request=req)
+
+    with pytest.raises(GitHubError) as e:
+        client(handler).user("bob")
+    msg = str(e.value)
+    assert e.value.status == 0
+    assert "ReadTimeout" in msg and "/users/bob" in msg and msg.isascii()
+    with pytest.raises(GitHubAuthError) as e:
+        client(lambda req: httpx.Response(401, json={})).user("bob")
+    assert str(e.value).isascii()
+
+
+def test_fake_github_sample_people_match_spec():
+    gh = FakeGitHub()
+    people = [gh.user(login) for login in gh.search_users("q")]
+    with_x = [p["login"] for p in people if p["x_username"]]
+    assert len(people) == 6 and len(with_x) == 4
+    repos = {login: gh.repos(login) for login in with_x}
+    assert all(repos.values())                                   # every X-named person has a repo
+    assert sum(any(r["description"] is None for r in rs) for rs in repos.values()) == 1
+    assert set(gh.following("fake_alex")) & set(gh.following("fake_sarah"))   # seeds share a candidate

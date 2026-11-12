@@ -1,4 +1,5 @@
 import re
+import time
 from typing import Any
 from urllib.parse import urlparse
 
@@ -48,7 +49,7 @@ def _x_from_social(accounts: list[dict[str, Any]]) -> str | None:
 
 class GitHubClient:
     def __init__(self, transport: httpx.BaseTransport | None = None):
-        self.transport = transport
+        self.client = httpx.Client(transport=transport, timeout=30.0)   # one connection pool per client
 
     def _get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         """GET one API path. Returns parsed JSON, or None on 404."""
@@ -58,25 +59,26 @@ class GitHubClient:
             "Authorization": f"Bearer {config.GITHUB_TOKEN}",
         }
         try:
-            with httpx.Client(transport=self.transport, timeout=30.0) as client:
-                r = client.get(f"{BASE}{path}", params=params, headers=headers)
+            r = self.client.get(f"{BASE}{path}", params=params, headers=headers)
         except httpx.HTTPError as e:
-            raise GitHubError(0, f"lỗi mạng: {e}")
+            raise GitHubError(0, f"network error {type(e).__name__} on GET {path}: {e}")
         if r.status_code == 404:
             return None
         if r.status_code == 401:
-            raise GitHubAuthError(401, "token sai hoặc hết hạn")
+            raise GitHubAuthError(401, "bad or expired token")
         if r.status_code in (403, 429) and (
             r.headers.get("x-ratelimit-remaining") == "0" or "retry-after" in r.headers
         ):
-            reset = int(r.headers.get("x-ratelimit-reset") or 0)
-            raise GitHubRateLimited(r.status_code, "hết hạn mức", reset)
+            retry_after = r.headers.get("retry-after", "")   # secondary limits: seconds to wait
+            reset = (int(time.time()) + int(retry_after) if retry_after.isdigit()
+                     else int(r.headers.get("x-ratelimit-reset") or 0))
+            raise GitHubRateLimited(r.status_code, "rate limited", reset)
         if r.status_code >= 400:
             raise GitHubError(r.status_code, r.text[:200])
         return r.json()
 
     def rate_limit(self) -> dict[str, Any]:
-        """GET /rate_limit (không tính vào hạn mức). Returns the core bucket."""
+        """GET /rate_limit (does not count against the quota). Returns the core bucket."""
         return self._get("/rate_limit")["resources"]["core"]
 
     def search_users(self, query: str, limit: int = 100) -> list[str]:
@@ -143,17 +145,33 @@ class GitHubClient:
         return logins[:limit]
 
 
+def _repo(login, name, description, topics, stars, pushed_at):
+    return {"source_id": f"repo:{login}/{name}", "name": name, "description": description,
+            "topics": topics, "stars": stars, "pushed_at": pushed_at,
+            "url": f"https://github.com/{login}/{name}"}
+
+
 # Sample people for X_MODE=fake: 4 with an X name (2 match, 1 matches but repo doesn't
 # describe it, 1 unrelated), 2 without one. search_users returns every sample login.
 _SAMPLE_USERS: dict[str, dict[str, Any]] = {
     "fake_alex": {"gh_id": 9001, "name": "Alex Builder", "bio": "Robotics founder, ML",
-                  "location": "Ho Chi Minh", "x_username": "alex_builder"},
+                  "location": "Ho Chi Minh", "x_username": "alex_builder",
+                  "repos": [_repo("fake_alex", "tactile-grasp", "Tactile feedback model for robotic grasping",
+                                  ["robotics", "machine-learning"], 120, "2026-11-01T00:00:00Z")],
+                  "following": ["fake_minh", "fake_linh"]},
     "fake_sarah": {"gh_id": 9002, "name": "Sarah Chen", "bio": "Robot learning researcher",
-                   "location": "Hanoi", "x_username": "sarah_robotics"},
+                   "location": "Hanoi", "x_username": "sarah_robotics",
+                   "repos": [_repo("fake_sarah", "robot-learning-notes",
+                                   "Notes and code for robot learning from demonstration",
+                                   ["robotics"], 40, "2026-10-20T00:00:00Z")],
+                   "following": ["fake_minh", "fake_david"]},
     "fake_minh": {"gh_id": 9003, "name": "Minh Tran", "bio": "Machine learning engineer",
-                  "location": "Vietnam", "x_username": "minh_ml"},
+                  "location": "Vietnam", "x_username": "minh_ml",
+                  "repos": [_repo("fake_minh", "ml-experiments", None, [], 3, "2026-06-01T00:00:00Z")]},
     "fake_linh": {"gh_id": 9004, "name": "Linh Pham", "bio": "Frontend developer",
-                  "location": "Vietnam", "x_username": "linh_front"},
+                  "location": "Vietnam", "x_username": "linh_front",
+                  "repos": [_repo("fake_linh", "portfolio-site", "Personal portfolio website built with React",
+                                  ["react"], 2, "2026-09-01T00:00:00Z")]},
     "fake_david": {"gh_id": 9005, "name": "David Kim", "bio": "Robotics hobbyist",
                    "location": "Singapore", "x_username": None},
     "fake_an": {"gh_id": 9006, "name": "An Nguyen", "bio": "Data analyst",
