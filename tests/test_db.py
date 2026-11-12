@@ -19,32 +19,32 @@ def test_init_db_is_idempotent(conn, campaign_id):
 
 
 def test_one_message_per_person(conn, campaign_id):
-    """Inserting a second message for the same x_user_id must raise IntegrityError."""
+    """Inserting a second message for the same prospect_id must raise IntegrityError."""
     conn.execute(
         """
-        INSERT INTO prospects (x_user_id, username, campaign_id, source, fetched_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO prospects (id, github_login, x_username, campaign_id, source, fetched_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        ("u123", "alice_ai", campaign_id, "segment:ai", "2026-11-12T00:00:00+00:00"),
+        ("gh:123", "alice_gh", "alice_ai", campaign_id, "segment:ai", "2026-11-12T00:00:00+00:00"),
     )
     conn.commit()
 
     conn.execute(
         """
-        INSERT INTO messages (x_user_id, text, evidence, evidence_ok, status, created_at)
+        INSERT INTO messages (prospect_id, text, evidence, evidence_ok, status, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        ("u123", "Hello Alice", "[]", 1, "draft", "2026-11-12T00:00:00+00:00"),
+        ("gh:123", "Hello Alice", "[]", 1, "draft", "2026-11-12T00:00:00+00:00"),
     )
     conn.commit()
 
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(
             """
-            INSERT INTO messages (x_user_id, text, evidence, evidence_ok, status, created_at)
+            INSERT INTO messages (prospect_id, text, evidence, evidence_ok, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            ("u123", "Second message", "[]", 1, "draft", "2026-11-12T00:00:00+00:00"),
+            ("gh:123", "Second message", "[]", 1, "draft", "2026-11-12T00:00:00+00:00"),
         )
         conn.commit()
 
@@ -53,20 +53,20 @@ def test_status_check_constraint(conn, campaign_id):
     """Invalid message status must violate CHECK constraint and raise IntegrityError."""
     conn.execute(
         """
-        INSERT INTO prospects (x_user_id, username, campaign_id, source, fetched_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO prospects (id, github_login, x_username, campaign_id, source, fetched_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        ("u456", "bob_robotics", campaign_id, "segment:robotics", "2026-11-12T00:00:00+00:00"),
+        ("gh:456", "bob_gh", "bob_robotics", campaign_id, "segment:robotics", "2026-11-12T00:00:00+00:00"),
     )
     conn.commit()
 
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(
             """
-            INSERT INTO messages (x_user_id, text, evidence, evidence_ok, status, created_at)
+            INSERT INTO messages (prospect_id, text, evidence, evidence_ok, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            ("u456", "Hello Bob", "[]", 1, "bogus", "2026-11-12T00:00:00+00:00"),
+            ("gh:456", "Hello Bob", "[]", 1, "bogus", "2026-11-12T00:00:00+00:00"),
         )
         conn.commit()
 
@@ -76,10 +76,10 @@ def test_message_requires_existing_prospect(conn):
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(
             """
-            INSERT INTO messages (x_user_id, text, evidence, evidence_ok, status, created_at)
+            INSERT INTO messages (prospect_id, text, evidence, evidence_ok, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            ("nonexistent_user", "Hello Stranger", "[]", 1, "draft", "2026-11-12T00:00:00+00:00"),
+            ("gh:nonexistent", "Hello Stranger", "[]", 1, "draft", "2026-11-12T00:00:00+00:00"),
         )
         conn.commit()
 
@@ -115,3 +115,26 @@ def test_writes_are_visible_to_second_connection(file_db):
 
     conn_a.close()
     conn_b.close()
+
+
+def test_one_x_account_per_prospect(conn, campaign_id):
+    """x_username must be UNIQUE COLLATE NOCASE across prospects."""
+    conn.execute(
+        """
+        INSERT INTO prospects (id, github_login, x_username, campaign_id, source, fetched_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        ("gh:101", "alice_gh", "alice_x", campaign_id, "segment:ai", "2026-11-12T00:00:00+00:00"),
+    )
+    conn.commit()
+
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            """
+            INSERT INTO prospects (id, github_login, x_username, campaign_id, source, fetched_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ("gh:102", "alice_other_gh", "ALICE_X", campaign_id, "segment:ai", "2026-11-12T00:00:00+00:00"),
+        )
+        conn.commit()
+

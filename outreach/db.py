@@ -32,13 +32,15 @@ def init_db(conn: sqlite3.Connection) -> None:
         );
 
         CREATE TABLE IF NOT EXISTS prospects (
-            x_user_id TEXT PRIMARY KEY,
-            username TEXT NOT NULL,
+            id TEXT PRIMARY KEY,
+            github_login TEXT NOT NULL,
+            x_username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            x_user_id TEXT,
             name TEXT,
             bio TEXT,
             location TEXT,
+            company TEXT,
             followers INTEGER,
-            protected INTEGER NOT NULL DEFAULT 0,
             can_dm INTEGER,
             campaign_id INTEGER NOT NULL REFERENCES campaigns(id),
             source TEXT NOT NULL,
@@ -49,29 +51,33 @@ def init_db(conn: sqlite3.Connection) -> None:
             fetched_at TEXT NOT NULL
         );
 
-        CREATE TABLE IF NOT EXISTS posts (
-            post_id TEXT PRIMARY KEY,
-            x_user_id TEXT NOT NULL REFERENCES prospects(x_user_id),
-            text TEXT NOT NULL,
-            created_at TEXT
+        CREATE TABLE IF NOT EXISTS repos (
+            source_id TEXT PRIMARY KEY,
+            prospect_id TEXT NOT NULL REFERENCES prospects(id),
+            name TEXT NOT NULL,
+            description TEXT,
+            topics TEXT NOT NULL DEFAULT '[]',
+            stars INTEGER NOT NULL DEFAULT 0,
+            pushed_at TEXT,
+            url TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY,
-            x_user_id TEXT NOT NULL UNIQUE REFERENCES prospects(x_user_id),
+            prospect_id TEXT NOT NULL UNIQUE REFERENCES prospects(id),
             text TEXT NOT NULL,
             evidence TEXT NOT NULL,
             evidence_ok INTEGER NOT NULL,
             edited INTEGER NOT NULL DEFAULT 0,
             status TEXT NOT NULL CHECK (status IN
                 ('draft','approved','rejected','sending','sent','failed','blocked','unknown')),
+            channel TEXT CHECK (channel IN ('manual','api')),
             error TEXT,
             dm_event_id TEXT,
             dm_conversation_id TEXT,
             claimed_at TEXT,
             sent_at TEXT,
             reply_text TEXT,
-            reply_event_id TEXT,
             replied_at TEXT,
             handled_at TEXT,
             created_at TEXT NOT NULL
