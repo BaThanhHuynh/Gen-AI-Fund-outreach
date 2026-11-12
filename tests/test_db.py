@@ -115,5 +115,3 @@ def test_writes_are_visible_to_second_connection(file_db):
 
     conn_a.close()
     conn_b.close()
-
-

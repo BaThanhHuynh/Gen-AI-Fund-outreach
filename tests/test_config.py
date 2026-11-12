@@ -59,5 +59,3 @@ def test_module_load_fails_on_invalid_send_mode():
     assert "SEND_MODE" in res.stderr
     assert "allowlist" in res.stderr
     assert "live" in res.stderr
-
-
