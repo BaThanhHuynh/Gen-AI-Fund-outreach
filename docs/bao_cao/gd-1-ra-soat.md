@@ -4,11 +4,38 @@ Ngày 2026-11-12 · Người rà: Claude · Phạm vi: `b3c3225..gd-1` (3 commit
 
 ## Kết luận
 
-**Vòng 2 (2026-11-12, tại `cff0304`): mã đạt, bốn mục vòng 1 đã sửa đúng. Chưa gắn `gd-1-ok` vì còn 1 chỗ
-phải sửa ở test — mục 5 dưới đây.**
+**Vòng 3 (2026-11-12, tại `29eb0cc`): đạt. Không còn mục «phải sửa». Đã gắn tag `gd-1-ok` tại `29eb0cc`.**
+
+Vòng 2 (tại `cff0304`): mã đạt, bốn mục vòng 1 đã sửa đúng; còn 1 chỗ phải sửa ở test (mục 5) — đã sửa xong
+ở vòng 3.
 
 Vòng 1 (tại `gd-1`): còn 2 mục phải sửa, cả hai ở `outreach/config.py`. Phần cơ sở dữ liệu và test đúng thiết
 kế. Hai mục này là chỗ bản quy trình không nêu, không phải làm sai quy trình.
+
+## Rà soát lại — vòng 3
+
+Phạm vi: `cff0304..29eb0cc` (4 commit, mỗi mục một commit đúng yêu cầu). `pytest -q` trong `.venv`
+(Python 3.14.7): `12 passed`. Sau khi chạy, `git status` sạch và test không tạo thư mục `data/`.
+
+Thử phá từng dòng mã trên bản sao:
+
+| Dòng bị phá | Kết quả |
+|---|---|
+| Bỏ commit trong `kv_set` (mục 5) | `test_writes_are_visible_to_second_connection` hỏng: `assert None == {'synced': True}` |
+| Bỏ commit trong `record_usage` | cùng test hỏng: `assert 0.0 == 0.01` |
+| Bỏ dòng tạo thư mục trong `connect()` | cùng test hỏng: `unable to open database file` |
+| Gỡ `validate_choice` ở `X_MODE` (mục 6) | `test_module_load_fails_on_invalid_x_mode` hỏng |
+| Gỡ `validate_choice` ở `SEND_MODE` (mục 6) | `test_module_load_fails_on_invalid_send_mode` hỏng |
+| Bỏ phép chia `1_000_000` ở nhánh `llm_in` của `record_usage` | **không test nào hỏng** — không chặn, xem «Ghi nhớ cho giai đoạn sau» |
+
+Mục 7: đặt `.env` có `X_MODE=real`, `SEND_MODE=live`, `LLM_PRICE_IN=3`, `LLM_PRICE_OUT=15`, tên mô hình và
+redirect URI khác, khoá giả. Nạp cấu hình ngoài pytest thấy `real live 3.0`, tức tệp `.env` có được đọc. Trong
+pytest, cả 11 biến đều về giá trị ghim và 12 test vẫn qua.
+
+Lời khai «đã thấy test hỏng khi tạm bỏ commit trong `kv_set`» ở `gd-1.md` khớp với kết quả tự thử.
+
+Tuỳ chọn, không cần quay lại sửa: `docs/bao_cao/gd-1.md` còn dòng trống thừa cuối tệp
+(`git diff --check gd-1..HEAD`).
 
 ## Rà soát lại — vòng 2
 
@@ -124,11 +151,21 @@ thẳng, khỏi phải nạp lại mô-đun.
 - Username trên X không phân biệt hoa thường; giai đoạn 5 so `SEND_ALLOWLIST` phải đưa cả hai về chữ thường.
 - Test và mã nằm chung commit `ad16d07`, nên lịch sử git không chứng minh được «viết test trước»; chỉ có
   output dán trong `gd-1.md`. Từ giai đoạn 2, commit test riêng trước commit mã.
+- (Vòng 3) Nhánh `llm_in` / `llm_out` của `record_usage` chưa có test, và `tests/conftest.py` ghim đơn giá mô
+  hình bằng 0 nên phép tính nào cũng ra 0. Test tính tiền mô hình ở giai đoạn 4 phải tự đặt đơn giá khác 0 và
+  khác nhau cho hai chiều (ví dụ `monkeypatch.setattr(config, "LLM_PRICE_IN", 3.0)`, `LLM_PRICE_OUT` là
+  `15.0`), rồi so `spend_since` với con số tính tay.
+- (Vòng 3) Giai đoạn 1 kết thúc với 12 test, quy trình tính từ 6. Các mốc «N test qua» ở giai đoạn sau cộng
+  thêm 6 (giai đoạn 2: 23 thay vì 17).
 
 ## Câu lệnh dán cho Antigravity
 
+Giai đoạn 1 đã đóng. Bắt đầu Giai đoạn 2:
+
 ```
-Đọc mục «Rà soát lại — vòng 2» trong docs/bao_cao/gd-1-ra-soat.md. Sửa mục 5 («phải sửa»), rồi mục 6 và 7,
-mỗi mục một commit. Với mục 5: tạm bỏ conn.commit() trong kv_set để thấy test hỏng, trả lại rồi mới commit.
-Chạy lại pytest -q, dán output vào cuối docs/bao_cao/gd-1.md rồi DỪNG. Không làm sang Giai đoạn 2.
+Đọc docs/quy_trinh_trien_khai.md (mục 0, 3, 4, 5 và «Giai đoạn 2»), docs/assignment.md,
+docs/knowledge/trang_thai.md và mục «Ghi nhớ cho giai đoạn sau» trong docs/bao_cao/gd-1-ra-soat.md. Thực hiện
+ĐÚNG Giai đoạn 2 theo vòng 4 bước ở mục 0, không làm sang giai đoạn khác. Trình Implementation Plan và chờ
+tôi duyệt trước khi viết mã. Commit test riêng, trước commit mã. Xong thì ghi docs/bao_cao/gd-2.md, cập nhật
+trang_thai.md, commit, gắn tag gd-2 rồi DỪNG.
 ```

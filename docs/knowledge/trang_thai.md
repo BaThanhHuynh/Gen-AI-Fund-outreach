@@ -1,6 +1,6 @@
 # Trạng thái dự án — bài tập GenAI Fund
 
-Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 1).
+Cập nhật: 2026-11-12 (Claude rà soát xong Giai đoạn 1, vòng 3 — đạt).
 
 - Đề bài: `docs/assignment.md`
 - Quy trình và thiết kế: `docs/quy_trinh_trien_khai.md`
@@ -17,7 +17,7 @@ Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 1).
 | Giai đoạn | Tình trạng | Tag |
 |---|---|---|
 | 0 — Việc của người (tài khoản, khoá, credit) | chưa bắt đầu | — |
-| 1 — Khung dự án và cơ sở dữ liệu | mã đạt sau rà soát vòng 2, còn 1 chỗ test phải sửa — xem `docs/bao_cao/gd-1-ra-soat.md` | gd-1 |
+| 1 — Khung dự án và cơ sở dữ liệu | **đạt** sau rà soát vòng 3 — xem `docs/bao_cao/gd-1-ra-soat.md` | gd-1, gd-1-ok |
 | 2 — Kết nối X và lần thử thật | chưa bắt đầu | — |
 | 3 — Tìm người | chưa bắt đầu | — |
 | 4 — Chấm điểm, soạn tin, kiểm bằng chứng | chưa bắt đầu | — |
