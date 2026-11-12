@@ -30,3 +30,33 @@ def test_doctor_dm_test_allows_user_case_insensitive_and_strips_at(conn, monkeyp
     assert len(fake_x.sent) == 1
     assert fake_x.sent[0][0] == "1001"  # alex_builder user ID in FakeXClient
 
+
+def test_doctor_env_check_fails_on_empty_keys(conn, monkeypatch, capsys):
+    """X_MODE=real requires non-empty GITHUB_TOKEN; empty string must be treated as missing."""
+    monkeypatch.setattr(config, "X_MODE", "real")
+    monkeypatch.setattr(config, "GITHUB_TOKEN", "")
+    monkeypatch.setenv("GITHUB_TOKEN", "")
+
+    exit_code = doctor.run_doctor([], conn=conn)
+
+    captured = capsys.readouterr()
+    assert exit_code != 0
+    assert "FAIL" in captured.out
+    assert "GITHUB_TOKEN" in captured.out
+
+
+def test_doctor_manual_channel_skips_x_check(conn, monkeypatch, capsys):
+    """When SEND_CHANNEL=manual, doctor skips calling x.me() and passes without X credentials."""
+    monkeypatch.setattr(config, "SEND_CHANNEL", "manual")
+
+    class BombClient:
+        def me(self):
+            raise RuntimeError("x.me() must not be called when SEND_CHANNEL=manual")
+
+    exit_code = doctor.run_doctor([], conn=conn, x=BombClient())
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Manual send channel (no X API credentials required)" in captured.out
+
+

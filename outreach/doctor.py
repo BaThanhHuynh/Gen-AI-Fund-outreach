@@ -25,50 +25,65 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
 
     # 1. Environment variables check
     print("[1] Checking environment configuration...")
-    required_keys = ["X_MODE", "SEND_MODE", "DAILY_SEND_CAP"]
+    required_keys = ["X_MODE", "SEND_MODE", "DAILY_SEND_CAP", "SEND_CHANNEL", "LLM_PROVIDER"]
     if config.X_MODE == "real":
-        required_keys.extend(["X_CLIENT_ID", "X_CLIENT_SECRET", "ANTHROPIC_API_KEY"])
+        required_keys.append("GITHUB_TOKEN")
+    if config.SEND_CHANNEL == "api":
+        required_keys.extend(["X_CLIENT_ID", "X_CLIENT_SECRET"])
+    if config.LLM_PROVIDER == "anthropic":
+        required_keys.append("ANTHROPIC_API_KEY")
 
     env_path = config.PROJECT_ROOT / ".env"
     if not env_path.exists():
         print("  WARN: Local .env file does not exist yet (falling back to default config)")
 
-    missing = [k for k in required_keys if os.getenv(k) is None and getattr(config, k, None) is None]
+    missing = []
+    for k in required_keys:
+        env_val = os.getenv(k)
+        cfg_val = getattr(config, k, None)
+        val = env_val if env_val is not None else cfg_val
+        if val is None or not str(val).strip():
+            missing.append(k)
+
     if missing:
         print(f"  FAIL: Missing required configuration keys: {', '.join(missing)}")
         has_failure = True
     else:
         print("  PASS: Core environment variables are configured (secrets kept hidden)")
 
-    # 2. Check connection and user identity
-    print("\n[2] Checking X connection and credentials...")
-    try:
-        me = x.me()
-        print(f"  PASS: Connected as @{me['username']} (ID: {me['id']})")
-    except AuthError as e:
-        print(f"  FAIL: Authentication failed: {e}")
-        print("  Advice: Run 'python -m outreach.auth' to log in via browser.")
-        return 1
-    except Exception as e:
-        print(f"  FAIL: Error connecting to X: {e}")
-        return 1
+    # 2. Check X connection and credentials
+    if config.SEND_CHANNEL == "api":
+        print("\n[2] Checking X connection and credentials...")
+        try:
+            me = x.me()
+            print(f"  PASS: Connected as @{me['username']} (ID: {me['id']})")
+        except AuthError as e:
+            print(f"  FAIL: Authentication failed: {e}")
+            print("  Advice: Run 'python -m outreach.auth' to log in via browser.")
+            return 1
+        except Exception as e:
+            print(f"  FAIL: Error connecting to X: {e}")
+            return 1
 
-    # 3. Check OAuth scopes
-    print("\n[3] Checking OAuth token permissions...")
-    oauth = kv_get(conn, "oauth")
-    if oauth and "scope" in oauth:
-        scopes = oauth["scope"]
-        has_dm_read = "dm.read" in scopes
-        has_dm_write = "dm.write" in scopes
-        if has_dm_read and has_dm_write:
-            print("  PASS: Token has dm.read and dm.write permissions")
+        # 3. Check OAuth scopes
+        print("\n[3] Checking OAuth token permissions...")
+        oauth = kv_get(conn, "oauth")
+        if oauth and "scope" in oauth:
+            scopes = oauth["scope"]
+            has_dm_read = "dm.read" in scopes
+            has_dm_write = "dm.write" in scopes
+            if has_dm_read and has_dm_write:
+                print("  PASS: Token has dm.read and dm.write permissions")
+            else:
+                print(f"  WARN: Missing DM scopes in token (active scopes: {scopes})")
         else:
-            print(f"  WARN: Missing DM scopes in token (active scopes: {scopes})")
+            if config.X_MODE == "fake":
+                print("  PASS: Running in fake mode with simulated scopes")
+            else:
+                print("  WARN: No stored scope metadata found in kv['oauth']")
     else:
-        if config.X_MODE == "fake":
-            print("  PASS: Running in fake mode with simulated scopes")
-        else:
-            print("  WARN: No stored scope metadata found in kv['oauth']")
+        print("\n[2] Checking X connection...")
+        print("  PASS: Manual send channel (no X API credentials required)")
 
     # 4. Optional --dm-test check
     if args.dm_test:
