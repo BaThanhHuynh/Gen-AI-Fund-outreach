@@ -4,13 +4,16 @@ import sys
 from typing import Any
 import sqlite3
 
+import httpx
+
 from outreach import config
 from outreach.db import connect, kv_get
 from outreach.xclient import AuthError, XClient, get_x
 from outreach.github import GitHubAuthError, GitHubClient, GitHubError
 
 
-def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | None = None, x: Any | None = None, gh: Any | None = None) -> int:
+def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | None = None, x: Any | None = None, gh: Any | None = None,
+               ollama_transport: httpx.BaseTransport | None = None) -> int:
     """Run system diagnostic checks and tests, returning 0 on success or 1 on failure."""
     parser = argparse.ArgumentParser(description="GenAI Fund Outreach Diagnostic Tool")
     parser.add_argument("--dm-test", type=str, metavar="USERNAME", help="Send a test DM to an allowlisted user")
@@ -98,6 +101,24 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
             has_failure = True
         except GitHubError as e:
             print(f"  FAIL: Could not reach GitHub: {e}")
+            has_failure = True
+
+    # Local model (only when drafting with Ollama)
+    if config.LLM_PROVIDER == "ollama":
+        print(f"\n[Ollama] Checking {config.OLLAMA_URL} for model {config.OLLAMA_MODEL}...")
+        try:
+            with httpx.Client(transport=ollama_transport, timeout=10) as client:
+                models = client.get(f"{config.OLLAMA_URL}/api/tags").json().get("models", [])
+            names = {m.get("name") for m in models} | {m.get("model") for m in models}
+            if config.OLLAMA_MODEL in names or f"{config.OLLAMA_MODEL}:latest" in names:
+                print("  PASS: Ollama is running and the model is installed")
+            else:
+                print(f"  FAIL: Model {config.OLLAMA_MODEL} is not installed in Ollama")
+                print(f"  Advice: run 'ollama pull {config.OLLAMA_MODEL}', or set LLM_PROVIDER=template in .env")
+                has_failure = True
+        except (httpx.HTTPError, ValueError) as e:
+            print(f"  FAIL: Ollama is not reachable at {config.OLLAMA_URL} ({type(e).__name__})")
+            print("  Advice: start Ollama, or set LLM_PROVIDER=template in .env")
             has_failure = True
 
     # 4. Optional --dm-test check

@@ -215,30 +215,3 @@ class FakeXClient:
         record_usage(self.conn, "dm_read", len(events))
         return events
 
-
-def fake_llm(system: str, user: str, schema: dict) -> dict[str, Any]:
-    """Mock LLM response conforming to JSON schemas."""
-    # Check if this is a score_fit call or draft_dm call based on schema properties
-    properties = schema.get("properties", {})
-    if "score" in properties:
-        return {
-            "score": 85,
-            "category": "builder",
-            "reasons": [
-                {
-                    "claim": "Building foundation models for robotic manipulation",
-                    "source_id": "bio",
-                }
-            ],
-        }
-    elif "text" in properties and "evidence" in properties:
-        return {
-            "text": "Hi Alex, saw your work on open-sourcing the tactile feedback model with 94% success on novel objects. We at GenAI Fund support robotics builders in SEA. Would love to hear what challenges you are facing next?",
-            "evidence": [
-                {
-                    "source_id": "p_1001_1",
-                    "quote": "tactile feedback model for robotic grasping",
-                }
-            ],
-        }
-    return {}
