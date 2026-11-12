@@ -17,7 +17,7 @@ Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 1).
 | Giai đoạn | Tình trạng | Tag |
 |---|---|---|
 | 0 — Việc của người (tài khoản, khoá, credit) | chưa bắt đầu | — |
-| 1 — Khung dự án và cơ sở dữ liệu | hoàn thành | gd-1 |
+| 1 — Khung dự án và cơ sở dữ liệu | đã rà soát, chờ sửa 2 mục — xem `docs/bao_cao/gd-1-ra-soat.md` | gd-1 |
 | 2 — Kết nối X và lần thử thật | chưa bắt đầu | — |
 | 3 — Tìm người | chưa bắt đầu | — |
 | 4 — Chấm điểm, soạn tin, kiểm bằng chứng | chưa bắt đầu | — |

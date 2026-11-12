@@ -63,3 +63,20 @@ Theo các điểm bổ sung được duyệt trước khi viết mã:
 
 - Bạn đã hoàn thành các bước chuẩn bị của Giai đoạn 0 (tài khoản X Developer, ứng dụng OAuth Web App với callback `http://127.0.0.1:8765/callback`, mua credit tối thiểu và tạo khóa Anthropic) chưa?
 - Khi sẵn sàng bước vào Giai đoạn 2, chúng ta sẽ cần các thông tin cấu hình thực tế này để chạy công cụ `doctor` và kiểm nghiệm gửi DM thử nghiệm.
+
+---
+
+## 6. Kết quả sửa sau rà soát (`docs/bao_cao/gd-1-ra-soat.md`)
+
+Đã hoàn thành sửa toàn bộ 4 mục theo đúng yêu cầu:
+1. **Mục 1 (commit `afc3b2a`):** Neo `DB_PATH` tuyệt đối vào thư mục gốc dự án (`PROJECT_ROOT / "data"`), kèm test tái hiện lỗi `test_db_path_is_absolute_and_anchored_to_project_root`.
+2. **Mục 2 (commit `c78b2eb`):** Thêm hàm `validate_choice` dừng ngay và ném `ValueError` nếu `X_MODE` hoặc `SEND_MODE` sai giá trị cho phép, kèm test tái hiện lỗi `test_invalid_x_mode_raises_value_error` và `test_invalid_send_mode_raises_value_error`.
+3. **Mục 3 (commit `022018e`):** Thiết lập trước các biến môi trường kiểm thử an toàn (`fake`, `allowlist`) ở đầu `tests/conftest.py` trước khi load `outreach`, cô lập hoàn toàn test suite khỏi `.env` thật của máy.
+4. **Mục 4 (commit `5640e75`):** Mở rộng test đa kết nối `test_writes_are_visible_to_second_connection` với thư mục con chưa tồn tại (`tmp_path / "sub" / "test.db"`) và xác thực khả năng hiển thị liên kết của `record_usage` qua `spend_since` khi kết nối A vẫn mở.
+
+### Kết quả chạy lại `pytest -q`
+```
+..........                                                               [100%]
+10 passed in 0.17s
+```
+
