@@ -29,3 +29,7 @@ Cập nhật: 2026-11-12 (Claude rà soát xong Giai đoạn 1, vòng 3 — đ�
 
 Bốn câu ở mục 2 của quy trình (trả lời có hiện qua API không, cách tính tiền người dùng đi kèm, đường dẫn
 soạn tin, nội dung trang luật tự động hoá của X) — trả lời ở giai đoạn 0 và 2.
+
+Cần quyết trước giai đoạn 7 (Claude nêu ngày 12/11/2026 khi xem kế hoạch giai đoạn 2): tin thử của
+`doctor --dm-test` ở giai đoạn 2 tạo hội thoại với tài khoản B, nên lần chạy thật ở bước 7.1 sẽ chặn B với lý
+do «existing conversation». Cần một tài khoản thứ ba chưa từng được nhắn, hoặc đổi bước 7.1.
