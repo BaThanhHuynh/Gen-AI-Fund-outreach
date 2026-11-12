@@ -1,12 +1,22 @@
+import os
 import sys
 from pathlib import Path
 
 # Ensure project root is in sys.path when running pytest directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import sqlite3
+# Ensure test suite runs in isolated fake/safe mode regardless of any local .env file
+os.environ["X_MODE"] = "fake"
+os.environ["SEND_MODE"] = "allowlist"
+os.environ["X_CLIENT_ID"] = ""
+os.environ["X_CLIENT_SECRET"] = ""
+os.environ["ANTHROPIC_API_KEY"] = ""
+os.environ["SEND_ALLOWLIST"] = ""
+os.environ["DAILY_SEND_CAP"] = "20"
+
 import pytest
-from outreach.db import connect, init_db
+from outreach.db import connect
+
 
 
 
