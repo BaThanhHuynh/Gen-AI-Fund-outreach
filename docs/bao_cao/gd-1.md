@@ -74,9 +74,25 @@ Theo các điểm bổ sung được duyệt trước khi viết mã:
 3. **Mục 3 (commit `022018e`):** Thiết lập trước các biến môi trường kiểm thử an toàn (`fake`, `allowlist`) ở đầu `tests/conftest.py` trước khi load `outreach`, cô lập hoàn toàn test suite khỏi `.env` thật của máy.
 4. **Mục 4 (commit `5640e75`):** Mở rộng test đa kết nối `test_writes_are_visible_to_second_connection` với thư mục con chưa tồn tại (`tmp_path / "sub" / "test.db"`) và xác thực khả năng hiển thị liên kết của `record_usage` qua `spend_since` khi kết nối A vẫn mở.
 
-### Kết quả chạy lại `pytest -q`
+### Kết quả chạy lại `pytest -q` (sau Vòng 1)
 ```
 ..........                                                               [100%]
 10 passed in 0.17s
 ```
+
+---
+
+## 7. Kết quả sửa sau rà soát — Vòng 2 (`docs/bao_cao/gd-1-ra-soat.md`)
+
+Đã hoàn thành sửa 3 mục theo yêu cầu:
+1. **Mục 5 (commit `6605ac5`):** Đọc `kv_get` trên kết nối B trước khi gọi `record_usage` trên kết nối A trong `test_writes_are_visible_to_second_connection`, đảm bảo `conn.commit()` trong `kv_set` được kiểm chứng độc lập (đã kiểm chứng test hỏng `AssertionError: assert None == {'synced': True}` khi tạm bỏ commit trong `kv_set`, sau đó phục hồi).
+2. **Mục 6 (commit `887787d`):** Bổ sung 2 test chạy tiến trình con (`subprocess`) nạp `outreach.config` với `X_MODE=fak` và `SEND_MODE=allowlst`, kiểm chứng `outreach/config.py` thực sự gọi `validate_choice` khi import.
+3. **Mục 7 (commit `65ef640`):** Ghim đầy đủ `LLM_PRICE_IN="0"`, `LLM_PRICE_OUT="0"`, `LLM_MODEL="claude-fable-5-2"`, `X_REDIRECT_URI="http://127.0.0.1:8765/callback"` trong `tests/conftest.py`, đồng thời chuẩn hóa dòng trống cuối tệp.
+
+### Kết quả chạy lại `pytest -q` (sau Vòng 2)
+```
+............                                                             [100%]
+12 passed in 1.14s
+```
+
 

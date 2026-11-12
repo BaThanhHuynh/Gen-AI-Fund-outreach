@@ -4,8 +4,51 @@ Ngày 2026-11-12 · Người rà: Claude · Phạm vi: `b3c3225..gd-1` (3 commit
 
 ## Kết luận
 
-**Chưa gắn `gd-1-ok`: còn 2 mục phải sửa, cả hai ở `outreach/config.py`.** Phần cơ sở dữ liệu và test đúng
-thiết kế. Hai mục này là chỗ bản quy trình không nêu, không phải làm sai quy trình.
+**Vòng 2 (2026-11-12, tại `cff0304`): mã đạt, bốn mục vòng 1 đã sửa đúng. Chưa gắn `gd-1-ok` vì còn 1 chỗ
+phải sửa ở test — mục 5 dưới đây.**
+
+Vòng 1 (tại `gd-1`): còn 2 mục phải sửa, cả hai ở `outreach/config.py`. Phần cơ sở dữ liệu và test đúng thiết
+kế. Hai mục này là chỗ bản quy trình không nêu, không phải làm sai quy trình.
+
+## Rà soát lại — vòng 2
+
+Phạm vi: `gd-1..cff0304` (5 commit). `pytest -q` trong `.venv`: `10 passed`.
+
+Đã kiểm và đạt:
+
+- Mục 1: chạy từ thư mục khác, `DB_PATH` vẫn tuyệt đối và nằm dưới gốc dự án. Đổi lại thành đường dẫn tương
+  đối thì `test_db_path_is_absolute_and_anchored_to_project_root` hỏng.
+- Mục 2: `X_MODE=fak` và `SEND_MODE=allowlst` làm ứng dụng dừng với `ValueError` nêu tên biến và các giá trị
+  hợp lệ. `X_MODE='  REAL '` vẫn được nhận là `real`. `LLM_PRICE_IN` để trống thành `0.0`.
+- Mục 3: đặt `.env` có `X_MODE=real`, `SEND_MODE=live`, khoá giả → test vẫn thấy `fake`, `allowlist`, khoá rỗng.
+- Mục 4: bỏ commit trong `record_usage`, hoặc bỏ dòng tạo thư mục → test thứ 7 hỏng.
+
+### 5. Phải sửa — test thứ 7 không còn canh được `kv_set` — `tests/test_db.py:100`
+
+Đây là tác dụng phụ từ chính gợi ý ở mục 4 của người rà. Test gọi `kv_set` rồi `record_usage` trên cùng kết
+nối A trước khi đọc. Lệnh commit trong `record_usage` lưu luôn phần ghi của `kv_set`. Đã thử: bỏ commit trong
+`kv_set`, cả 10 test vẫn qua (ở vòng 1 test này hỏng). `kv_set` là nơi lưu token đổi mới, nên dòng commit
+này phải có test canh.
+
+Mong đợi: đọc `kv_get` qua kết nối B **trước** khi gọi `record_usage` trên A. Thứ tự: `kv_set` qua A → mở B →
+`kv_get` qua B → `record_usage` qua A → `spend_since` qua B.
+Kiểm: tạm bỏ `conn.commit()` trong `kv_set` thì test phải hỏng; trả lại thì qua.
+
+### Nên sửa cùng lượt
+
+6. **Chưa có test canh việc `config.py` thật sự gọi `validate_choice`.** Đã thử: gỡ lời gọi ở `X_MODE` hoặc ở
+   `SEND_MODE`, cả 10 test vẫn qua — ba test hiện có chỉ thử hàm. Thêm một test nạp cấu hình với `X_MODE=fak`
+   (ví dụ chạy tiến trình con `python -c "import outreach.config"` với biến môi trường đó, mong mã thoát khác
+   0 và stderr có `X_MODE`), và một test tương tự cho `SEND_MODE`.
+7. **`tests/conftest.py` chưa ghim `LLM_PRICE_IN`, `LLM_PRICE_OUT`, `LLM_MODEL`, `X_REDIRECT_URI`.** Đã thử:
+   `.env` có `LLM_PRICE_IN=3` thì test thấy `3.0`. Test tính tiền mô hình ở giai đoạn 4 sẽ cho kết quả khác
+   nhau tuỳ máy.
+
+Tuỳ chọn: bốn tệp có dòng trống thừa ở cuối (`git diff --check gd-1..HEAD`).
+
+---
+
+*Phần dưới là nội dung vòng 1, giữ nguyên để đối chiếu.*
 
 ## Đã kiểm và đạt
 
@@ -85,7 +128,7 @@ thẳng, khỏi phải nạp lại mô-đun.
 ## Câu lệnh dán cho Antigravity
 
 ```
-Đọc docs/bao_cao/gd-1-ra-soat.md. Sửa mục 1 và 2 («phải sửa») theo thứ tự, mỗi mục một commit kèm test tái
-hiện lỗi. Sửa tiếp mục 3 và 4, mỗi mục một commit. Chạy lại pytest -q, dán output vào cuối
-docs/bao_cao/gd-1.md rồi DỪNG. Không làm sang Giai đoạn 2.
+Đọc mục «Rà soát lại — vòng 2» trong docs/bao_cao/gd-1-ra-soat.md. Sửa mục 5 («phải sửa»), rồi mục 6 và 7,
+mỗi mục một commit. Với mục 5: tạm bỏ conn.commit() trong kv_set để thấy test hỏng, trả lại rồi mới commit.
+Chạy lại pytest -q, dán output vào cuối docs/bao_cao/gd-1.md rồi DỪNG. Không làm sang Giai đoạn 2.
 ```
