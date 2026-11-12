@@ -258,12 +258,11 @@ def test_search_recent_joins_authors(conn):
 
     def mock_handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/2/tweets/search/recent"
-        qs = parse_qs(request.url.query)
-        assert qs["query"] == ["robotics lang:en"]
-        assert qs["max_results"] == ["10"]
-        assert "author_id" in qs["expansions"][0]
-        assert "receives_your_dm" in qs["user.fields"][0]
-        assert "created_at" in qs["tweet.fields"][0]
+        assert request.url.params["query"] == "robotics lang:en"
+        assert request.url.params["max_results"] == "10"
+        assert "author_id" in request.url.params["expansions"]
+        assert "receives_your_dm" in request.url.params["user.fields"]
+        assert "created_at" in request.url.params["tweet.fields"]
 
         return httpx.Response(
             200,
@@ -327,8 +326,7 @@ def test_users_by_usernames(conn):
 
     def mock_handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/2/users/by"
-        qs = parse_qs(request.url.query)
-        assert qs["usernames"] == ["alice,bob"]
+        assert request.url.params["usernames"] == "alice,bob"
         return httpx.Response(
             200,
             json={
@@ -375,8 +373,7 @@ def test_following_endpoint(conn):
 
     def mock_handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/2/users/u10/following"
-        qs = parse_qs(request.url.query)
-        assert qs["max_results"] == ["50"]
+        assert request.url.params["max_results"] == "50"
         return httpx.Response(
             200,
             json={
@@ -410,9 +407,8 @@ def test_user_posts_excludes_replies_and_retweets(conn):
 
     def mock_handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/2/users/u10/tweets"
-        qs = parse_qs(request.url.query)
-        assert qs["max_results"] == ["5"]
-        assert qs["exclude"] == ["retweets,replies"]
+        assert request.url.params["max_results"] == "5"
+        assert request.url.params["exclude"] == "retweets,replies"
         return httpx.Response(
             200,
             json={
@@ -481,8 +477,7 @@ def test_dm_events_stops_at_known_id(conn):
     def mock_handler(request: httpx.Request) -> httpx.Response:
         nonlocal pages_requested
         pages_requested += 1
-        qs = parse_qs(request.url.query)
-        cursor = qs.get("pagination_token", [None])[0]
+        cursor = request.url.params.get("pagination_token")
 
         if cursor is None:
             return httpx.Response(
