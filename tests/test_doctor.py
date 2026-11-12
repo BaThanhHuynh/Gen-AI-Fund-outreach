@@ -37,7 +37,11 @@ def test_doctor_env_check_fails_on_empty_keys(conn, monkeypatch, capsys):
     monkeypatch.setattr(config, "GITHUB_TOKEN", "")
     monkeypatch.setenv("GITHUB_TOKEN", "")
 
-    exit_code = doctor.run_doctor([], conn=conn)
+    class NoCallGitHub:
+        def rate_limit(self):
+            raise RuntimeError("GitHub must not be called without a token")
+
+    exit_code = doctor.run_doctor([], conn=conn, gh=NoCallGitHub())
 
     captured = capsys.readouterr()
     assert exit_code != 0
@@ -67,6 +71,7 @@ def test_doctor_fails_on_bad_github_token(conn, monkeypatch, capsys):
     from outreach.github import GitHubAuthError
     monkeypatch.setattr(config, "X_MODE", "real")
     monkeypatch.setattr(config, "GITHUB_TOKEN", "bad")
+    monkeypatch.setenv("GITHUB_TOKEN", "bad")   # so the env check passes and only the GitHub step can fail
 
     class BadGitHub:
         def rate_limit(self):
@@ -76,5 +81,5 @@ def test_doctor_fails_on_bad_github_token(conn, monkeypatch, capsys):
 
     out = capsys.readouterr().out
     assert exit_code == 1
-    assert "FAIL" in out
-    assert "GitHub" in out
+    assert "FAIL: GitHub rejected GITHUB_TOKEN" in out
+    assert "github.com/settings/tokens" in out

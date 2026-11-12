@@ -87,7 +87,7 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
         print("  PASS: Manual send channel (no X API credentials required)")
 
     # GitHub token (real mode only; /rate_limit does not count against quota)
-    if config.X_MODE == "real":
+    if config.X_MODE == "real" and config.GITHUB_TOKEN:   # an empty token already failed step [1]
         print("\n[GitHub] Checking GITHUB_TOKEN...")
         try:
             core = (gh or GitHubClient()).rate_limit()
