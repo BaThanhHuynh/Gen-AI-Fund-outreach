@@ -1,11 +1,12 @@
 # Trạng thái dự án — bài tập GenAI Fund
 
-Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 2).
+Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 2b, 45 passed, chờ Claude rà soát).
 
 - Đề bài: `docs/assignment.md`
 - Quy trình và thiết kế: `docs/quy_trinh_trien_khai.md`
 - Báo cáo từng giai đoạn: `docs/bao_cao/gd-N.md` · kết luận rà soát: `docs/bao_cao/gd-N-ra-soat.md`
 - Vai trò: Antigravity viết mã và test; Claude rà soát sau mỗi giai đoạn.
+- Nghiên cứu đường 0 USD (dữ liệu thật, người thật) và hướng đi đã duyệt: `docs/knowledge/nghien-cuu-0-usd.md`
 
 ## Mốc thời gian
 
@@ -16,10 +17,11 @@ Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 2).
 
 | Giai đoạn | Tình trạng | Tag |
 |---|---|---|
-| 0 — Việc của người (tài khoản, khoá, credit) | chưa bắt đầu | — |
+| 0 — Việc của người (token GitHub, Ollama, tài khoản B, đọc luật X) | chưa bắt đầu — danh sách mới trong quy trình bản 2 | — |
 | 1 — Khung dự án và cơ sở dữ liệu | **đạt** sau rà soát vòng 3 — xem `docs/bao_cao/gd-1-ra-soat.md` | gd-1, gd-1-ok |
-| 2 — Kết nối X và lần thử thật | hoàn thành | gd-2 |
-| 3 — Tìm người | chưa bắt đầu | — |
+| 2 — Kết nối X (kênh API tuỳ chọn) | mã đã viết; chưa đạt — sửa ở 2b; bước 2.4 bỏ — xem `docs/bao_cao/gd-2-ra-soat.md` | gd-2 |
+| 2b — Sửa sau rà soát, đổi khoá hồ sơ, cấu hình mới | xong, chờ Claude rà soát | gd-2b |
+| 3 — Tìm người qua GitHub | chưa bắt đầu | — |
 | 4 — Chấm điểm, soạn tin, kiểm bằng chứng | chưa bắt đầu | — |
 | 5 — Gửi và theo dõi | chưa bắt đầu | — |
 | 6 — Giao diện | chưa bắt đầu | — |
@@ -27,9 +29,10 @@ Cập nhật: 2026-11-12 (Antigravity hoàn thành Giai đoạn 2).
 
 ## Câu hỏi còn mở
 
-Bốn câu ở mục 2 của quy trình (trả lời có hiện qua API không, cách tính tiền người dùng đi kèm, đường dẫn
-soạn tin, nội dung trang luật tự động hoá của X) — trả lời ở giai đoạn 0 và 2.
+Hướng 0 USD đã được người dùng duyệt ngày 12/11/2026: tìm qua GitHub, chấm bằng luật, soạn bằng Ollama hoặc khuôn,
+gửi tay trong X; kênh X API và Claude là tuỳ chọn. Bốn câu hỏi mở về X API của bản 1 không còn chặn.
 
-Cần quyết trước giai đoạn 7 (Claude nêu ngày 12/11/2026 khi xem kế hoạch giai đoạn 2): tin thử của
-`doctor --dm-test` ở giai đoạn 2 tạo hội thoại với tài khoản B, nên lần chạy thật ở bước 7.1 sẽ chặn B với lý
-do «existing conversation». Cần một tài khoản thứ ba chưa từng được nhắn, hoặc đổi bước 7.1.
+Còn chờ người dùng (GĐ0): tốc độ `eval rate` của Ollama (quyết mặc định `ollama` hay `template`); hồ sơ GitHub
+có tên X của B có hiện qua API không; nút «Message» với người lạ trên X.
+
+Bước 7.1: nên dùng tài khoản B chưa từng nhắn với A, để luồng thử thật không phải bấm «Already in contact».

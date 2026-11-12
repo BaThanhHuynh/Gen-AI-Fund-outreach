@@ -75,3 +75,31 @@ Diagnostic complete.
   2. *(b) Người dùng đi kèm trong `expansions=author_id` có bị tính phí 0,010 USD mỗi người không:* Chưa thử với X thật.
   3. *(c) Đường dẫn `https://x.com/messages/compose?recipient_id=…&text=…` còn mở đúng khung soạn tin không:* Chưa thử với X thật.
   4. *(d) Trang chính sách tự động hóa tại `help.x.com/en/rules-and-policies/x-automation`:* Chưa mở kiểm tra trực tiếp trên web X.
+
+---
+
+## 5. Kết quả hoàn thành Giai đoạn 2b (Sửa sau rà soát, đổi khoá hồ sơ, cấu hình mới)
+
+### Kết quả chạy kiểm thử test trước khi sửa mã (Red phase)
+Theo quy định TDD, với mỗi test mới / sửa đổi, test đã được chạy và xác nhận hỏng trước khi cài đặt mã nguồn:
+1. `tests/test_xclient.py::test_login_fetches_and_returns_me`:  
+   `FAILED tests/test_xclient.py::test_login_fetches_and_returns_me - TypeError: login() got an unexpected keyword argument 'transport'`
+2. `tests/test_xclient.py::test_fake_inbox_starts_empty`:  
+   `FAILED tests/test_xclient.py::test_fake_inbox_starts_empty - assert [{'id': 'e_in...00:00Z', ...}] == []`
+3. `tests/test_config.py::test_module_load_fails_on_invalid_send_channel`:  
+   `FAILED tests/test_config.py::test_module_load_fails_on_invalid_send_channel - AssertionError: assert 0 != 0`
+4. `tests/test_config.py::test_module_load_fails_on_invalid_llm_provider`:  
+   `FAILED tests/test_config.py::test_module_load_fails_on_invalid_llm_provider - AssertionError: assert 0 != 0`
+5. `tests/test_doctor.py::test_doctor_env_check_fails_on_empty_keys`:  
+   `FAILED tests/test_doctor.py::test_doctor_env_check_fails_on_empty_keys - assert 'GITHUB_TOKEN' in ...`
+6. `tests/test_doctor.py::test_doctor_manual_channel_skips_x_check`:  
+   `FAILED tests/test_doctor.py::test_doctor_manual_channel_skips_x_check - assert 1 == 0`
+7. `tests/test_db.py::test_one_x_account_per_prospect`:  
+   `FAILED tests/test_db.py::test_one_x_account_per_prospect - sqlite3.OperationalError: table prospects has no column named id`
+
+### Kết quả chạy toàn bộ test suite sau Giai đoạn 2b (`pytest -q`)
+```
+.............................................                            [100%]
+45 passed in 4.38s
+```
+*(Đạt đúng 45 passed: 40 bài cũ − 2 bài đã gỡ khỏi doctor `--spend` và `--check-reply` + 7 bài kiểm tra mới).*
