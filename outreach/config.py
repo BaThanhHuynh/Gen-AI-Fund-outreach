@@ -5,8 +5,29 @@ from dotenv import load_dotenv
 # Load environment variables from .env if present
 load_dotenv()
 
+def validate_choice(var_name: str, value: str, allowed: tuple[str, ...]) -> str:
+    """Validate that value is in allowed choices, or raise ValueError."""
+    cleaned = value.strip().lower()
+    if cleaned not in allowed:
+        allowed_str = ", ".join(f"'{a}'" for a in allowed)
+        raise ValueError(
+            f"Invalid value for {var_name}: expected one of [{allowed_str}], got '{cleaned}'"
+        )
+    return cleaned
+
+
+def parse_float_env(var_name: str, value: str | None, default: float = 0.0) -> float:
+    """Safely parse float environment variable, handling empty strings."""
+    if value is None or not value.strip():
+        return default
+    try:
+        return float(value.strip())
+    except ValueError:
+        raise ValueError(f"Invalid float value for {var_name}: '{value}'")
+
+
 # Mode settings
-X_MODE: str = os.getenv("X_MODE", "fake").strip().lower()
+X_MODE: str = validate_choice("X_MODE", os.getenv("X_MODE", "fake"), ("fake", "real"))
 X_CLIENT_ID: str = os.getenv("X_CLIENT_ID", "")
 X_CLIENT_SECRET: str = os.getenv("X_CLIENT_SECRET", "")
 X_REDIRECT_URI: str = os.getenv("X_REDIRECT_URI", "http://127.0.0.1:8765/callback")
@@ -14,11 +35,13 @@ X_REDIRECT_URI: str = os.getenv("X_REDIRECT_URI", "http://127.0.0.1:8765/callbac
 # LLM settings
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 LLM_MODEL: str = os.getenv("LLM_MODEL", "claude-fable-5-2")
-LLM_PRICE_IN: float = float(os.getenv("LLM_PRICE_IN", "0"))
-LLM_PRICE_OUT: float = float(os.getenv("LLM_PRICE_OUT", "0"))
+LLM_PRICE_IN: float = parse_float_env("LLM_PRICE_IN", os.getenv("LLM_PRICE_IN", "0"))
+LLM_PRICE_OUT: float = parse_float_env("LLM_PRICE_OUT", os.getenv("LLM_PRICE_OUT", "0"))
 
 # Sending safety controls
-SEND_MODE: str = os.getenv("SEND_MODE", "allowlist").strip().lower()
+SEND_MODE: str = validate_choice(
+    "SEND_MODE", os.getenv("SEND_MODE", "allowlist"), ("allowlist", "live")
+)
 _allowlist_raw = os.getenv("SEND_ALLOWLIST", "")
 SEND_ALLOWLIST: list[str] = [
     item.strip().lstrip("@") for item in _allowlist_raw.split(",") if item.strip()
