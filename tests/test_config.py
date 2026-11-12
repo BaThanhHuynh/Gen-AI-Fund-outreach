@@ -1,4 +1,7 @@
+import os
 from pathlib import Path
+import subprocess
+import sys
 import pytest
 from outreach import config
 from outreach.config import validate_choice
@@ -22,4 +25,39 @@ def test_invalid_send_mode_raises_value_error():
     """Invalid SEND_MODE value must raise ValueError naming the variable and valid choices."""
     with pytest.raises(ValueError, match=r"SEND_MODE.*\[.*allowlist.*live.*\]"):
         validate_choice("SEND_MODE", "allowlst", ("allowlist", "live"))
+
+
+def test_module_load_fails_on_invalid_x_mode():
+    """Importing outreach.config with invalid X_MODE must exit non-zero with stderr naming X_MODE."""
+    env = os.environ.copy()
+    env["X_MODE"] = "fak"
+    res = subprocess.run(
+        [sys.executable, "-c", "import outreach.config"],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parent.parent),
+    )
+    assert res.returncode != 0
+    assert "X_MODE" in res.stderr
+    assert "fake" in res.stderr
+    assert "real" in res.stderr
+
+
+def test_module_load_fails_on_invalid_send_mode():
+    """Importing outreach.config with invalid SEND_MODE must exit non-zero with stderr naming SEND_MODE."""
+    env = os.environ.copy()
+    env["SEND_MODE"] = "allowlst"
+    res = subprocess.run(
+        [sys.executable, "-c", "import outreach.config"],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parent.parent),
+    )
+    assert res.returncode != 0
+    assert "SEND_MODE" in res.stderr
+    assert "allowlist" in res.stderr
+    assert "live" in res.stderr
+
 
