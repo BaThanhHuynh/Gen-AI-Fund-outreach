@@ -7,9 +7,10 @@ import sqlite3
 from outreach import config
 from outreach.db import connect, kv_get
 from outreach.xclient import AuthError, XClient, get_x
+from outreach.github import GitHubAuthError, GitHubClient, GitHubError
 
 
-def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | None = None, x: Any | None = None) -> int:
+def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | None = None, x: Any | None = None, gh: Any | None = None) -> int:
     """Run system diagnostic checks and tests, returning 0 on success or 1 on failure."""
     parser = argparse.ArgumentParser(description="GenAI Fund Outreach Diagnostic Tool")
     parser.add_argument("--dm-test", type=str, metavar="USERNAME", help="Send a test DM to an allowlisted user")
@@ -84,6 +85,20 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
     else:
         print("\n[2] Checking X connection...")
         print("  PASS: Manual send channel (no X API credentials required)")
+
+    # GitHub token (real mode only; /rate_limit does not count against quota)
+    if config.X_MODE == "real":
+        print("\n[GitHub] Checking GITHUB_TOKEN...")
+        try:
+            core = (gh or GitHubClient()).rate_limit()
+            print(f"  PASS: GitHub token accepted ({core['remaining']}/{core['limit']} requests left)")
+        except GitHubAuthError as e:
+            print(f"  FAIL: GitHub rejected GITHUB_TOKEN: {e}")
+            print("  Advice: create a new token at github.com/settings/tokens and set GITHUB_TOKEN in .env")
+            has_failure = True
+        except GitHubError as e:
+            print(f"  FAIL: Could not reach GitHub: {e}")
+            has_failure = True
 
     # 4. Optional --dm-test check
     if args.dm_test:
