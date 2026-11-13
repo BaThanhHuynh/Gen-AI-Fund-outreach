@@ -88,6 +88,7 @@ def test_doctor_fails_on_bad_github_token(conn, monkeypatch, capsys):
 def test_doctor_fails_when_ollama_model_missing(conn, monkeypatch, capsys):
     """LLM_PROVIDER=ollama: a running Ollama without OLLAMA_MODEL is FAIL with the pull command."""
     import httpx
+    monkeypatch.setattr(config, "X_MODE", "real")
     monkeypatch.setattr(config, "LLM_PROVIDER", "ollama")
     monkeypatch.setattr(config, "OLLAMA_MODEL", "qwen3:4b")
 
@@ -103,3 +104,18 @@ def test_doctor_fails_when_ollama_model_missing(conn, monkeypatch, capsys):
     assert "FAIL" in out
     assert "FAIL: Model qwen3:4b is not installed" in out
     assert "ollama pull qwen3:4b" in out
+
+
+def test_doctor_skips_ollama_in_fake_mode(conn, monkeypatch, capsys):
+    """X_MODE=fake always drafts with template, so a missing Ollama must not make doctor fail."""
+    import httpx
+    monkeypatch.setattr(config, "LLM_PROVIDER", "ollama")
+
+    def handler(request):
+        raise AssertionError("fake mode must not call Ollama")
+
+    exit_code = doctor.run_doctor([], conn=conn, x=FakeXClient(conn),
+                                  ollama_transport=httpx.MockTransport(handler))
+
+    assert "[Ollama]" not in capsys.readouterr().out
+    assert exit_code == 0

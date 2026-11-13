@@ -103,8 +103,8 @@ def run_doctor(args_list: list[str] | None = None, conn: sqlite3.Connection | No
             print(f"  FAIL: Could not reach GitHub: {e}")
             has_failure = True
 
-    # Local model (only when drafting with Ollama)
-    if config.LLM_PROVIDER == "ollama":
+    # Local model (only when drafting with Ollama; X_MODE=fake always drafts with template)
+    if config.LLM_PROVIDER == "ollama" and config.X_MODE == "real":
         print(f"\n[Ollama] Checking {config.OLLAMA_URL} for model {config.OLLAMA_MODEL}...")
         try:
             with httpx.Client(transport=ollama_transport, timeout=10) as client:
