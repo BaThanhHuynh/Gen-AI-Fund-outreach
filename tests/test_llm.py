@@ -68,13 +68,25 @@ def test_near_duplicate_warning():
 def test_template_draft_passes_verification():
     prospect = {"name": "Alex Builder", "bio": "Robotics founder, ML"}
     fit = {"score": 60, "category": "founder",
-           "reasons": [{"claim": "bio", "source_id": "bio"},
-                       {"claim": "repo", "source_id": "repo:dev/agri"}]}
+           "reasons": [{"claim": "Bio mentions robotics", "source_id": "bio"},
+                       {"claim": "Repo agri is about robot", "source_id": "repo:dev/agri"}]}
     out = llm.template_draft("We are GenAI Fund.", prospect, SOURCES, fit)
     assert out["text"].startswith("Hi Alex,")
     assert "We are GenAI Fund." in out["text"]
     assert out["evidence"][0]["source_id"] == "repo:dev/agri"
     assert llm.verify_evidence(out["evidence"], SOURCES) is True
+
+
+def test_template_draft_quotes_only_keyword_repos():
+    """A repo cited only for activity or stars is off-topic: fall back to the bio instead."""
+    sources = {"bio": "I build robotics systems for farms in Vietnam.", "repo:a/robot": "robot",
+               "repo:a/dotfiles": "dotfiles: My zsh and vim configuration files"}
+    fit = {"score": 50, "category": "builder", "reasons": [
+        {"claim": "Repo robot is about robotics", "source_id": "repo:a/robot"},
+        {"claim": "Pushed code to dotfiles in the last 90 days", "source_id": "repo:a/dotfiles"},
+        {"claim": "dotfiles has 80 stars", "source_id": "repo:a/dotfiles"}]}
+    out = llm.template_draft("ctx", {"name": "Ana"}, sources, fit)
+    assert out["evidence"] == [{"source_id": "bio", "quote": "I build robotics systems for farms in Vietnam."}]
 
 
 def test_template_draft_without_quotable_source_raises():
@@ -112,6 +124,15 @@ def test_ollama_unreachable_gives_clear_error():
         llm.ollama_call("s", "u", llm.DRAFT_SCHEMA, transport=httpx.MockTransport(handler))
     assert isinstance(e.value, llm.LLMUnavailable)
     assert "Ollama is not running" in str(e.value) and "LLM_PROVIDER=template" in str(e.value)
+
+
+def test_ollama_timeout_stops_the_batch():
+    """A model too slow for one prospect is too slow for all: stop instead of waiting 300 s each."""
+    def handler(request):
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    with pytest.raises(llm.LLMDown, match="did not answer"):
+        llm.ollama_call("s", "u", llm.DRAFT_SCHEMA, transport=httpx.MockTransport(handler))
 
 
 def test_anthropic_usage_recorded(conn):

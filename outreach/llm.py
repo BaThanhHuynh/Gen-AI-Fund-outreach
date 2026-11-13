@@ -67,9 +67,9 @@ def _cut(text: str) -> str:
 
 def template_draft(sender_context: str, prospect: dict, sources: dict[str, str], fit: dict) -> dict:
     """Fill a fixed message with one verbatim quote: a matched repo's description, else a bio sentence."""
-    # ponytail: repo reasons are tried in score order (keyword repos first); when none of those has a
-    # description, an "active"/"stars" repo may be quoted before falling back to the bio
-    for sid in dict.fromkeys(r["source_id"] for r in fit.get("reasons", [])):
+    # only repos that matched a keyword ("Repo <name> is about …"); activity / stars reasons are off-topic
+    keyword_repos = (r["source_id"] for r in fit.get("reasons", []) if " is about " in r["claim"])
+    for sid in dict.fromkeys(keyword_repos):
         name, sep, desc = sources.get(sid, "").partition(": ")
         if sid.startswith("repo:") and sep and len(_cut(desc)) >= config.MIN_QUOTE_CHARS:
             quote, where = _cut(desc), f"{name} on GitHub"
@@ -108,6 +108,9 @@ def ollama_call(system: str, user: str, schema: dict, transport=None) -> dict:
             r = client.post(f"{config.OLLAMA_URL}/api/chat", json=body)
     except httpx.ConnectError as e:
         raise LLMDown(f"Ollama is not running at {config.OLLAMA_URL} — start it or set "
+                      f"LLM_PROVIDER=template") from e
+    except httpx.TimeoutException as e:
+        raise LLMDown(f"Ollama did not answer within 300 s — use a smaller OLLAMA_MODEL or set "
                       f"LLM_PROVIDER=template") from e
     except httpx.HTTPError as e:
         raise LLMUnavailable(f"Ollama request failed: {type(e).__name__}: {e}") from e
