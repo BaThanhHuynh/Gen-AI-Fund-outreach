@@ -16,7 +16,7 @@ GĐ4 trong `docs/quy_trinh_trien_khai.md`. Claude phiên chính đối chiếu t
 
 | # | Lỗi | Tình huống hỏng | Sửa | Commit |
 |---|---|---|---|---|
-| 1 | `gd-4.md` mục 2: output «test hỏng» không phải output thật | Báo cáo dán `1 failed, 67 passed, 3 errors`. Chạy lại commit `bebd313`: `pytest -q` ra `Interrupted: 3 errors during collection`; thêm `--continue-on-collection-errors` ra `1 failed, 72 passed, 3 errors` | Dán lại cả hai output thật kèm đúng lệnh | commit báo cáo |
+| 1 | `gd-4.md` mục 2: output «test hỏng» không phải output thật | Báo cáo dán `1 failed, 67 passed, 3 errors`. Chạy lại commit `bebd313`: `pytest -q` ra `Interrupted: 3 errors during collection`; thêm `--continue-on-collection-errors` ra `1 failed, 72 passed, 3 errors` | Dán lại cả hai output thật kèm đúng lệnh | 265b0f7 |
 | 2 | `template_draft` trích cả repo không khớp từ khoá | Repo khớp từ khoá không có mô tả, repo `dotfiles` mới đẩy mã có 80 sao → tin trích «My zsh and vim configuration files», `evidence_ok=1`, duyệt được không cần sửa | Chỉ lấy lý do «Repo … is about …» (repo khớp từ khoá); không có thì lùi về bio. Test `test_template_draft_quotes_only_keyword_repos` | `e80081d` |
 
 ## Nên sửa — đã sửa luôn (rẻ, chạm đúng chỗ dễ hỏng)
