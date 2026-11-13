@@ -28,10 +28,11 @@ def _get(conn, message_id: int) -> sqlite3.Row:
     return row
 
 
-def _move(conn, message_id: int, where: str, sql_set: str, params: tuple = ()) -> bool:
+def _move(conn, message_id: int, where: str, sql_set: str, params: tuple = (), where_params: tuple = ()) -> bool:
     """Guarded single UPDATE: changes the message only while `where` still holds. True when it did."""
     with conn:
-        cur = conn.execute(f"UPDATE messages SET {sql_set} WHERE id = ? AND {where}", (*params, message_id))
+        cur = conn.execute(f"UPDATE messages SET {sql_set} WHERE id = ? AND {where}",
+                           (*params, message_id, *where_params))
     return cur.rowcount == 1
 
 
@@ -39,11 +40,12 @@ def _allowed(username: str) -> bool:
     return username.casefold() in {a.casefold() for a in config.SEND_ALLOWLIST}
 
 
+# Timestamps all come from db.now() (same UTC ISO-8601 shape), so they compare correctly as strings.
+_IN_LAST_24H = "SELECT COUNT(*) FROM messages WHERE status IN ('sending','sent','unknown') AND claimed_at >= ?"
+
+
 def sends_in_last_24h(conn) -> int:
-    cutoff = _ago(24 * 3600)
-    rows = conn.execute("SELECT claimed_at FROM messages WHERE status IN ('sending','sent','unknown') "
-                        "AND claimed_at IS NOT NULL").fetchall()
-    return sum(1 for r in rows if _ts(r["claimed_at"]) >= cutoff)
+    return conn.execute(_IN_LAST_24H, (_ago(24 * 3600).isoformat(),)).fetchone()[0]
 
 
 def check_can_send(conn, message_id: int) -> str | None:
@@ -65,17 +67,19 @@ def check_can_send(conn, message_id: int) -> str | None:
 
 def claim(conn, message_id: int, channel: str) -> bool:
     """approved -> sending in one UPDATE, committed before the caller does anything else.
+    The daily cap is counted inside the same UPDATE, so two tabs cannot both take the last slot.
     A new attempt clears handled_at so its outcome shows up in needs_attention again."""
-    return _move(conn, message_id, "status = 'approved'",
-                 "status = 'sending', channel = ?, claimed_at = ?, handled_at = NULL", (channel, now()))
+    return _move(conn, message_id, f"status = 'approved' AND ({_IN_LAST_24H}) < ?",
+                 "status = 'sending', channel = ?, claimed_at = ?, handled_at = NULL", (channel, now()),
+                 (_ago(24 * 3600).isoformat(), config.DAILY_SEND_CAP))
 
 
 def open_manual(conn, message_id: int) -> dict:
     reason = check_can_send(conn, message_id)
     if reason:
         raise SendBlocked(reason)
-    if not claim(conn, message_id, "manual"):
-        raise SendBlocked("not approved")  # lost a race with another click
+    if not claim(conn, message_id, "manual"):  # lost a race with another click or tab
+        raise SendBlocked(check_can_send(conn, message_id) or "not approved")
     m = _get(conn, message_id)
     return {"url": f"https://x.com/{m['x_username']}", "text": m["text"]}
 
@@ -112,7 +116,7 @@ def send_api(conn, x, message_id: int) -> str:
     if reason:
         raise SendBlocked(reason)
     if not claim(conn, message_id, "api"):
-        raise SendBlocked("not approved")
+        raise SendBlocked(check_can_send(conn, message_id) or "not approved")
     m = _get(conn, message_id)  # send exactly the text that was claimed
 
     user_id = m["x_user_id"]
@@ -145,6 +149,8 @@ def send_api(conn, x, message_id: int) -> str:
         return _finish(conn, message_id, "unknown", str(e))
     except XError as e:  # 400, 401 (AuthError) and other client errors: certainly not sent
         return _finish(conn, message_id, "failed", str(e))
+    except Exception as e:  # e.g. a 2xx reply that is not JSON: X may have delivered it, so never resend
+        return _finish(conn, message_id, "unknown", f"unexpected error after sending: {e!r}")
     return _finish(conn, message_id, "sent", None, dm_event_id=res["dm_event_id"],
                    dm_conversation_id=res["dm_conversation_id"], sent_at=now())
 
@@ -166,13 +172,16 @@ def resolve_unknown(conn, message_id: int, was_sent: bool) -> str:
 
 
 def mark_replied(conn, message_id: int, note: str) -> None:
-    if not _move(conn, message_id, "status = 'sent'", "reply_text = ?, replied_at = ?", (note, now())):
+    # a new reply shows up in needs_attention again even if an earlier one was handled
+    if not _move(conn, message_id, "status = 'sent'", "reply_text = ?, replied_at = ?, handled_at = NULL",
+                 (note, now())):
         raise ValueError("only a sent message can be marked replied")
 
 
 def mark_handled(conn, message_id: int) -> None:
-    if not _move(conn, message_id, "1 = 1", "handled_at = ?", (now(),)):
-        raise ValueError(f"message {message_id} not found")
+    _get(conn, message_id)  # ValueError when it does not exist
+    if not _move(conn, message_id, "status NOT IN ('unknown', 'sending')", "handled_at = ?", (now(),)):
+        raise ValueError("resolve this send first: an unknown or in-progress send cannot be marked handled")
 
 
 def set_do_not_contact(conn, prospect_id: str, value: bool) -> None:

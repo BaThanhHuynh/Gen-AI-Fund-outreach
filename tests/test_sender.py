@@ -273,7 +273,11 @@ def test_needs_attention_contents(conn, campaign_id):
     add(conn, campaign_id, "u9", "approved")
     assert {r["id"] for r in sender.needs_attention(conn)} == set(ids.values())
     for name, mid in ids.items():
-        sender.mark_handled(conn, mid)
+        if name in ("unknown", "manual_sending"):
+            with pytest.raises(ValueError):
+                sender.mark_handled(conn, mid)
+        else:
+            sender.mark_handled(conn, mid)
         listed = mid in {r["id"] for r in sender.needs_attention(conn)}
         assert listed == (name in ("unknown", "manual_sending"))  # these only leave by the user's choice
 
@@ -290,3 +294,90 @@ def test_new_attempt_after_handled_failure_shows_again(conn, campaign_id):
     conn.commit()
     assert sender.send_api(conn, x, mid) == "failed"
     assert mid in {r["id"] for r in sender.needs_attention(conn)}
+
+
+def _attention(conn) -> set:
+    return {r["id"] for r in sender.needs_attention(conn)}
+
+
+def test_daily_cap_holds_when_two_tabs_claim_different_messages(conn, campaign_id, monkeypatch):
+    monkeypatch.setattr(config, "DAILY_SEND_CAP", 1)
+    m1, m2 = add(conn, campaign_id), add(conn, campaign_id, "sarah_robotics")
+    assert sender.check_can_send(conn, m1) is None and sender.check_can_send(conn, m2) is None  # both tabs checked
+    assert sender.claim(conn, m1, "manual") is True
+    assert sender.claim(conn, m2, "manual") is False
+    assert sender.sends_in_last_24h(conn) == 1
+    with pytest.raises(SendBlocked, match="daily cap"):
+        sender.open_manual(conn, m2)
+
+
+def test_api_unexpected_error_after_send_becomes_unknown(conn, campaign_id, monkeypatch):
+    x = FakeXClient(conn)
+    mid = add(conn, campaign_id)
+
+    def delivered_then_broke(user_id, text):
+        x.sent.append((user_id, text))
+        raise ValueError("2xx reply that is not JSON")
+
+    monkeypatch.setattr(x, "send_dm", delivered_then_broke)
+    assert sender.send_api(conn, x, mid) == "unknown"
+    assert row(conn, mid)["status"] == "unknown"
+    assert mid in _attention(conn)
+
+
+def test_new_reply_after_handled_shows_again(conn, campaign_id):
+    mid = add(conn, campaign_id, status="sent")
+    sender.mark_replied(conn, mid, "interested")
+    sender.mark_handled(conn, mid)
+    assert mid not in _attention(conn)
+    sender.mark_replied(conn, mid, "let's book a call")
+    assert mid in _attention(conn)
+
+
+def test_mark_handled_refuses_unknown_and_manual_sending(conn, campaign_id):
+    unknown = add(conn, campaign_id, status="unknown", channel="api", claimed_at=now())
+    waiting = add(conn, campaign_id, "sarah_robotics", "sending", channel="manual", claimed_at=now())
+    for mid in (unknown, waiting):
+        with pytest.raises(ValueError):
+            sender.mark_handled(conn, mid)
+        assert row(conn, mid)["handled_at"] is None
+    with pytest.raises(ValueError):
+        sender.mark_handled(conn, 999)
+
+
+@pytest.mark.parametrize("step", ["users_by_usernames", "dm_events_with"])
+def test_api_prior_check_error_returns_to_approved_and_raises(conn, campaign_id, monkeypatch, step):
+    x = FakeXClient(conn)
+    mid = add(conn, campaign_id)
+
+    def times_out(*args, **kwargs):
+        raise Ambiguous("timeout")
+
+    monkeypatch.setattr(x, step, times_out)
+    with pytest.raises(Ambiguous):
+        sender.send_api(conn, x, mid)
+    r = row(conn, mid)
+    assert (r["status"], r["channel"], r["claimed_at"]) == ("approved", None, None)
+    assert not conn.in_transaction  # the release is committed
+    assert len(x.sent) == 0
+
+
+def test_api_claim_is_committed_before_any_x_call(file_db):
+    a, b = connect(file_db), connect(file_db)
+    a.execute("INSERT INTO campaigns (id, name, segment, keywords, sender_context, created_at)"
+              " VALUES (1,'c','s','k','x',?)", (now(),))
+    a.commit()
+    mid = add(a, 1)
+    x, seen = FakeXClient(a), []
+
+    def spy(fn):
+        def wrapped(*args):
+            seen.append(tuple(b.execute("SELECT status, channel FROM messages WHERE id = ?", (mid,)).fetchone()))
+            return fn(*args)
+        return wrapped
+
+    x.users_by_usernames, x.dm_events_with, x.send_dm = (spy(x.users_by_usernames), spy(x.dm_events_with),
+                                                         spy(x.send_dm))
+    assert sender.send_api(a, x, mid) == "sent"
+    assert seen == [("sending", "api")] * 3  # another connection already saw the claim at every X call
+    a.close(), b.close()
