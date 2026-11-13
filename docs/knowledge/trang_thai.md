@@ -16,7 +16,7 @@ Cập nhật: 2026-11-13 (bàn giao: GĐ4 đạt `gd-4-ok`; GĐ5 xong `gd-5`, ch
 | 1, 2, 2b | đạt | gd-1-ok, gd-2-ok |
 | 3 — Tìm người qua GitHub | **đạt** (72 test) | gd-3, gd-3-ok |
 | 4 — Chấm điểm, soạn tin | **đạt** (rà soát subagent: 2 phải sửa + 4 nên sửa đã sửa; 102 test; 4.3 chạy lại sau sửa) | gd-4, gd-4-ok |
-| 5 — Gửi và theo dõi | **mã xong** (124 test, chỉ kiểm bằng `FakeXClient`). **Còn**: rà soát subagent độc lập → `gd-5-ok` | gd-5 |
+| 5 — Gửi và theo dõi | **đạt** (rà soát subagent: 0 phải sửa, 5 nên sửa đã sửa; 131 test; chỉ kiểm bằng `FakeXClient`) | gd-5, gd-5-ok |
 | 6, 7 | chưa bắt đầu | — |
 
 ## Việc tiếp theo (phiên sau)
@@ -24,8 +24,10 @@ Cập nhật: 2026-11-13 (bàn giao: GĐ4 đạt `gd-4-ok`; GĐ5 xong `gd-5`, ch
    sửa; gắn `gd-5-ok`; ghi `docs/bao_cao/gd-5-ra-soat.md`.
 2. Làm GĐ6 (giao diện) theo quy trình.
 
+## Đã chốt
+- 13/11/2026: `failed` được ẩn khỏi Needs attention bằng «Mark handled» (người dùng: «Giữ: cho ẩn»; `gd-5-ra-soat.md`).
+
 ## Câu hỏi còn mở
-- `gd-5.md` mục 5: `failed` có được ẩn bằng «handled» không.
 - `gd-4.md` mục 5: cắt câu trích ở 120 ký tự, ngưỡng `MIN_SCORE=40`, mặc định `LLM_PROVIDER` (`config.py` /
   `.env.example` vẫn là `ollama`), ưu tiên câu bio có từ khoá.
 - Tỉ lệ `no_x_handle` cao (254/264).
