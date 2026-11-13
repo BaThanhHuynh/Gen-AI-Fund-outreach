@@ -33,7 +33,8 @@ def keyword_hits(text: str | None, keywords: list[str]) -> list[str]:
     hits = []
     for kw in keywords:
         words = kw.casefold().split()
-        if words and re.search(r"\b" + r"\s+".join(map(re.escape, words)) + r"\b", text):
+        # (?<!\w) / (?!\w) instead of \b so keywords like "c++" or ".net" still match as whole words
+        if words and re.search(r"(?<!\w)" + r"\s+".join(map(re.escape, words)) + r"(?!\w)", text):
             hits.append(kw.strip())
     return hits
 

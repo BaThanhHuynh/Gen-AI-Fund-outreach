@@ -58,6 +58,11 @@ def test_keyword_match_is_word_boundary():
     assert fit.keyword_hits("Machine\n Learning", ["machine learning", " "]) == ["machine learning"]
 
 
+def test_keyword_with_symbols_matches_whole_word():
+    assert fit.keyword_hits("I write C++ and .NET services", ["c++", ".net", "c#"]) == ["c++", ".net"]
+    assert fit.keyword_hits("abc++ tools", ["c++"]) == []
+
+
 def test_score_campaign_writes_scores(conn, campaign_id):
     conn.execute("UPDATE campaigns SET keywords = 'robotics, ai' WHERE id = ?", (campaign_id,))
     conn.execute(
