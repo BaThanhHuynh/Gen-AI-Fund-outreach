@@ -42,7 +42,7 @@ SEND_CHANNEL: str = validate_choice(
 
 # LLM settings
 LLM_PROVIDER: str = validate_choice(
-    "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "ollama"), ("ollama", "template", "anthropic")
+    "LLM_PROVIDER", os.getenv("LLM_PROVIDER", "template"), ("ollama", "template", "anthropic")
 )
 OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3:4b").strip()
 OLLAMA_URL: str = "http://127.0.0.1:11434"

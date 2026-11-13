@@ -1,0 +1,24 @@
+# Demo script (3–5 minutes)
+
+Setup before recording: `.env` with `X_MODE=real`, `SEND_CHANNEL=manual`, `SEND_MODE=allowlist`,
+`SEND_ALLOWLIST=<test account B>`, `LLM_PROVIDER=template`. App running (`streamlit run app.py`). Logged in to X as
+account A in one browser tab, as B on a phone or second browser. B has never messaged A.
+
+| # | Time | Show | Say |
+|---|---|---|---|
+| 1 | 0:00–0:30 | Terminal: `python -m outreach.doctor` (all `PASS`) | "One command checks the setup: GitHub token, send channel, drafting model. No X API keys needed." |
+| 2 | 0:30–1:10 | **Find**: campaign (segment, keywords such as `robotics, machine learning`), `Search GitHub`. Point at the counter "n people had no X handle" | "People come from GitHub's official API: bio keywords plus a Southeast Asian location. We only keep people who list an X account, and the tool says how many it dropped." |
+| 3 | 1:10–1:50 | `Score`, then the profile table: score, category, reasons with links | "The score is rules, not a model. Every reason points to the bio, the location or a real repo you can click." |
+| 4 | 1:50–2:40 | **Review**: `Draft next N`. Open one draft: quote next to its source link. Edit a word and `Approve`. Then show a draft whose quote does not match its source: `Approve` refuses with `evidence not verified — edit the text first` | "Drafts must quote real evidence word for word. If a quote is not in the source, approving is blocked until a person rewrites it." |
+| 5 | 2:40–3:30 | **Send**: B's message → `Start`. Copy button, `Open @B on X`, press Message, paste, send as A. Show B receiving it. Back in the app: `I sent it` | "The tool reserves the message before it opens X, so a double click cannot send twice. I press Send myself: that keeps us inside X's automation rules and costs nothing." |
+| 6 | 3:30–3:50 | Try `Start` on B again (blocked: already sent). Show a real person who is not on the allowlist: blocked with `not on SEND_ALLOWLIST (safety mode)`, no X link opened | "One message per person, ever. And while we test, only our own accounts can be contacted." |
+| 7 | 3:50–4:20 | B replies on the phone. **Track** → `Mark replied` with a note → it appears under Needs attention → `Mark handled`. Point at sent / replied / reply rate and `Spend today: $0.00` | "Replies don't show up by themselves, because reading DMs through the API is paid. You mark them, and the tool keeps the list of what needs you." |
+| 8 | 4:20–4:50 | README's "Optional paid features" table | "What is not done: the X API channel is written and tested with mocks only, never with real credits. Only people with an X handle on GitHub are reachable: in a real search, 480 of 510 had none." |
+
+Notes for recording:
+- Step 4, refused approval: `template` drafts copy their quote straight from the source, so they always verify. An
+  unverified quote only comes from a model (`ollama` / `anthropic`). If no draft on screen is unverified, show
+  `python -m pytest -q tests/test_review.py -k approve_requires_verified_evidence` passing and the warning text in
+  the Review tab code instead, and say so.
+- Hide tokens: never open `.env` on screen; `doctor` prints no secret values.
+- Blur or skip real people's names in step 2–3 if needed; do not message anyone except B.
