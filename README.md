@@ -27,7 +27,9 @@ Default cost: **$0**. Everything runs on your machine; the only data store is on
 
 ## Install
 
-1. Get the code and enter the folder:
+1. Get the code and enter the folder. On Windows, use a short folder path (about 80 characters or less, such as
+   `C:\Users\you\genaifund-outreach`): some installed files have very long names, and Windows refuses paths over 260
+   characters unless long paths are enabled.
    ```bash
    git clone <this repository URL> genaifund-outreach
    cd genaifund-outreach
@@ -147,6 +149,7 @@ Known limits:
 | Every send says `not on SEND_ALLOWLIST` | Expected in safety mode; see the table above |
 | A manual send is stuck at `Waiting for you to send` | Confirm it with one of the three buttons, in **Send** or **Needs attention** |
 | `streamlit` is not found | Activate the virtual environment first |
+| `pip` stops with `OSError: [Errno 2] No such file or directory` and a hint about Windows Long Path support | The folder path is too long: clone into a shorter path, or [enable long paths](https://pip.pypa.io/warnings/enable-long-paths), then run `pip install -r requirements.txt` again |
 
 ## Where your data lives
 
