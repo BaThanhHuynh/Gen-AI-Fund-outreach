@@ -200,3 +200,12 @@ def test_draft_for_campaign_skips_one_but_stops_when_provider_down(conn, campaig
     with pytest.raises(llm.LLMDown):
         llm.draft_for_campaign(conn, drafter, campaign_id)
     assert [r[0] for r in conn.execute("SELECT prospect_id FROM messages")] == ["gh:2"]
+
+
+def test_draft_for_campaign_drops_evidence_items_that_are_not_objects(conn, campaign_id):
+    """A model's malformed evidence list must not be stored: one bad item used to break every tab of the app."""
+    _prospect(conn, campaign_id, 1, 90)
+    bad = lambda *a: {"text": "Hi", "evidence": ["oops", {"source_id": "bio", "quote": "Robotics engineer here"}]}
+    assert llm.draft_for_campaign(conn, bad, campaign_id) == 1
+    ev = json.loads(conn.execute("SELECT evidence FROM messages").fetchone()["evidence"])
+    assert ev == [{"source_id": "bio", "quote": "Robotics engineer here"}]

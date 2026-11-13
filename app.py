@@ -3,6 +3,7 @@
 Run: streamlit run app.py. Business rules live in outreach/; this file only shows data and calls those functions.
 """
 import json
+import re
 from datetime import datetime, timezone
 
 import streamlit as st
@@ -36,6 +37,9 @@ def manual_buttons(mid: int, where: str) -> None:
                                                      ("Already in contact", "existing")]):
         if col.button(label, key=f"{where}_{outcome}_{mid}"):
             act(sender.confirm_manual, conn, mid, outcome)
+
+
+SAFE_SOURCE = re.compile(r"bio|location|repo:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")  # source ids come from a model
 
 
 def source_url(login: str, source_id: str) -> str:
@@ -138,17 +142,20 @@ with review_tab:
     else:
         n = st.number_input("How many drafts", min_value=1, max_value=50, value=5, key="draft_n")
         if st.button(f"Draft next {n}", key="draft"):
-            bar, made = st.progress(0.0, "Drafting…"), 0
-            try:
-                for i in range(n):  # one at a time so the bar moves: a local model can take a minute per draft
-                    if not llm.draft_for_campaign(conn, llm.get_drafter(conn), cid, limit=1):
-                        break
-                    made += 1
-                    bar.progress((i + 1) / n, f"Drafted {made} of {n}")
+            bar, tried, drafter = st.progress(0.0, "Drafting…"), [], llm.get_drafter(conn)
+
+            def draft_one(*args):  # moves the bar per person: a local model can take a minute per draft
+                tried.append(1)
+                bar.progress(min(len(tried) / n, 1.0), f"Drafting person {len(tried)}…")
+                return drafter(*args)
+
+            try:  # one pass, so a person whose draft failed is not retried (each call can be slow or paid)
+                made = llm.draft_for_campaign(conn, draft_one, cid, limit=n)
             except Exception as e:  # Ollama down, Anthropic key or quota: stop the batch and say why
                 st.error(f"Drafting stopped: {e}")
-            st.success(f"{made} new drafts." if made else "Nobody left to draft (score below the minimum, "
-                                                          "do-not-contact, or already has a message).")
+            else:
+                st.success(f"{made} new drafts." if made else "Nobody left to draft (score below the minimum, "
+                                                              "do-not-contact, or already has a message).")
 
         drafts = rows("SELECT m.*, p.name, p.github_login, p.x_username, p.bio, p.location, p.company, "
                       "p.fit_score, p.fit_category, p.fit_reasons FROM messages m "
@@ -159,9 +166,10 @@ with review_tab:
         for i, d in enumerate(drafts):
             mid = d["id"]
             with st.container(border=True):
-                st.markdown(f"**{d['name'] or d['github_login']}** · [@{d['x_username']}]"
-                            f"(https://x.com/{d['x_username']}) · [GitHub](https://github.com/{d['github_login']})"
-                            f" · score {d['fit_score']} ({d['fit_category']})")
+                # plain text: profile fields are untrusted, and no X link before Start reserves the message
+                st.text(f"{d['name'] or d['github_login']} · @{d['x_username']} · "
+                        f"score {d['fit_score']} ({d['fit_category']})")
+                st.markdown(f"[GitHub profile](https://github.com/{d['github_login']})")
                 st.text(" · ".join(x for x in (d["bio"], d["location"], d["company"]) if x))
                 if d["status"] == "failed":
                     st.error(f"Sending failed: {d['error']}. Edit and approve again, or reject.")
@@ -170,7 +178,10 @@ with review_tab:
                 for ev in json.loads(d["evidence"]):
                     sid = str(ev.get("source_id"))
                     st.text(f"“{ev.get('quote')}”")
-                    st.markdown(f"— [{sid}]({source_url(d['github_login'], sid)})")
+                    if SAFE_SOURCE.fullmatch(sid):
+                        st.markdown(f"— [{sid}]({source_url(d['github_login'], sid)})")
+                    else:
+                        st.text(f"— {sid}")
                 text = st.text_area("Message", d["text"], key=f"text_{mid}")
                 for problem in llm.draft_problems(text, texts[:i] + texts[i + 1:]):
                     st.warning(problem)
@@ -214,6 +225,8 @@ with send_tab:
                     st.error(str(e))
                 else:
                     st.rerun()
+            if st.button("Reject", key=f"send_reject_{mid}"):
+                act(review.reject, conn, mid)
 
     waiting = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
                    "WHERE m.status = 'sending' AND m.channel = 'manual' ORDER BY m.id")
@@ -263,8 +276,9 @@ with track_tab:
         st.subheader("Mark replied")
         who = {r["id"]: handles[r["prospect_id"]] for r in unreplied}
         pick = st.selectbox("Who replied?", list(who), format_func=lambda i: f"@{who[i]}", key="reply_pick")
-        reply_note = st.text_input("Note: what they said", key="reply_note")
-        if st.button("Mark replied", key="reply"):
+        # keys per message: after a click the note box empties and a second click cannot hit the next person
+        reply_note = st.text_input("Note: what they said", key=f"reply_note_{pick}")
+        if st.button("Mark replied", key=f"reply_{pick}"):
             act(sender.mark_replied, conn, pick, reply_note)
 
     st.subheader("Send log")
@@ -281,7 +295,8 @@ with track_tab:
     dnc = {p["id"]: p for p in rows("SELECT id, x_username, do_not_contact FROM prospects ORDER BY x_username")}
     if dnc:
         pid = st.selectbox("Person", list(dnc), format_func=lambda i: f"@{dnc[i]['x_username']}", key="dnc_pick")
-        on = st.toggle("Do not contact", value=bool(dnc[pid]["do_not_contact"]), key=f"dnc_{pid}")
-        if on != bool(dnc[pid]["do_not_contact"]):
+        cur = bool(dnc[pid]["do_not_contact"])  # in the key: a change from another tab rebuilds the toggle
+        on = st.toggle("Do not contact", value=cur, key=f"dnc_{pid}_{int(cur)}")
+        if on != cur:
             sender.set_do_not_contact(conn, pid, on)
             st.rerun()

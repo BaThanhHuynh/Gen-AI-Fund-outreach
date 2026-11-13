@@ -223,12 +223,13 @@ def draft_for_campaign(conn: sqlite3.Connection, drafter: Drafter, campaign_id: 
         text = out.get("text") if isinstance(out, dict) else None
         if not isinstance(text, str) or not text.strip():
             continue
-        evidence = out.get("evidence")
+        evidence = out.get("evidence")  # model output: keep only {source_id, quote} objects
+        evidence = [e for e in evidence if isinstance(e, dict)] if isinstance(evidence, list) else []
         with conn:
             cur = conn.execute(
                 """INSERT INTO messages (prospect_id, text, evidence, evidence_ok, status, created_at)
                    VALUES (?, ?, ?, ?, 'draft', ?) ON CONFLICT(prospect_id) DO NOTHING""",
-                (p["id"], text.strip(), json.dumps(evidence if isinstance(evidence, list) else []),
+                (p["id"], text.strip(), json.dumps(evidence),
                  int(verify_evidence(evidence, sources)), now()))
         made += cur.rowcount
     return made
