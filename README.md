@@ -63,7 +63,8 @@ The new `.env` starts with `X_MODE=fake`: fake GitHub profiles, template drafts,
    streamlit run app.py
    ```
 3. The sidebar says `SAMPLE DATA`. Walk through the tabs:
-   **Find** → create a campaign → `Search GitHub` → `Score` ·
+   **Find** → create a campaign with keywords `robotics, robot learning` (both people above then score 40 or more)
+   → `Search GitHub` → `Score` ·
    **Review** → `Draft next N` → edit → `Approve` ·
    **Send** → `Start` → `I sent it` ·
    **Track** → `Mark replied` → `Mark handled`.
@@ -108,7 +109,7 @@ DMs to people who have not asked to be contacted, even when a person approved ea
 
 | Feature | Setting | Cost | Status |
 |---|---|---|---|
-| Send through the X API | `SEND_CHANNEL=api`, `X_CLIENT_ID`, `X_CLIENT_SECRET`, then `python -m outreach.auth` to log in | X API credits: about $0.035 per message (user lookup $0.010 + conversation check $0.010 + send $0.015). Needs an X developer App with DM read/write permission | **Tested with mocks only.** Allowlisted recipients only |
+| Send through the X API | `SEND_CHANNEL=api`, `X_CLIENT_ID`, `X_CLIENT_SECRET`, then `python -m outreach.auth` to log in. Register `http://127.0.0.1:8765/callback` as the App's callback URL | X API credits: about $0.035 per message (user lookup $0.010 + conversation check $0.010 + send $0.015). Needs an X developer App with DM read/write permission | **Tested with mocks only.** Allowlisted recipients only |
 | Draft with Claude | `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `LLM_PRICE_IN` / `LLM_PRICE_OUT` (USD per million tokens, from Anthropic's pricing page) | Per token; the sidebar shows `Spend today` | Tested with mocks only |
 
 Profiles of real people are sent only to a local model (Ollama) or to a paid API (Anthropic). Free cloud models are
@@ -137,6 +138,8 @@ Known limits:
 - Drafts quote at most 120 characters, cut at a word boundary, so a quote can end mid-sentence. Edit it in review.
 - People need a fit score of at least 40 to get a draft.
 - There are no automatic follow-ups and no automatic reply detection.
+- A real search checks every GitHub account it finds and can take several minutes. The page shows no progress
+  until it finishes.
 
 ## Troubleshooting
 
@@ -154,8 +157,9 @@ Known limits:
 ## Where your data lives
 
 Only on your machine, in one SQLite file: `data/outreach.db` (real) or `data/fake.db` (sample data). Keys live only in
-`.env`. Both are excluded from git. Nothing is sent anywhere except GitHub (search), X (only when you open a profile,
-or on the API channel) and the drafting model you chose.
+`.env`; on the API channel, the X login tokens are also kept in the SQLite file. Both are excluded from git. Nothing
+is sent anywhere except GitHub (search), X (only when you open a profile, or on the API channel) and the drafting
+model you chose. Streamlit's usage statistics are switched off in `.streamlit/config.toml`.
 
 ## Tests
 

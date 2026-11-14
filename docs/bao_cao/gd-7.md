@@ -15,7 +15,7 @@ bằng tài khoản B. Mọi output ở 7.1 chạy ở **`X_MODE=real`** (GitHub
   | 2 | `Add` tài khoản GitHub `BaThanhHuynh` (ghi X là `Nolanhuynh`) → `Score` → `Draft` | 45 điểm; bản nháp trích nguyên văn bio, `evidence_ok = 1` | Dòng CSDL (mục 2) |
   | 3 | `Approve` → `Start` → người dùng gửi từ A → B nhận → `I sent it` | Tin `sent`, kênh `manual` | `gd-7-send-b.jpg`, `gd-7-x-b.png`, dòng CSDL |
   | 4 | `Start` lần hai cho B | Bị chặn: `not approved`; tab Send không còn nút nào cho B | Output (mục 2) |
-  | 5 | `Start` với người thật ngoài danh sách (`@IliaLarchenko`) | Không có nút `Start`, hiện `Can't send: not on SEND_ALLOWLIST (safety mode)`. Gọi thẳng `open_manual` → `SendBlocked`, tin vẫn `approved`, không giữ chỗ, không trả đường dẫn X. Sau đó tin bị từ chối | Output (mục 2) |
+  | 5 | `Start` với người thật ngoài danh sách (ẩn tên) | Không có nút `Start`, hiện `Can't send: not on SEND_ALLOWLIST (safety mode)`. Gọi thẳng `open_manual` → `SendBlocked`, tin vẫn `approved`, không giữ chỗ, không trả đường dẫn X. Sau đó tin bị từ chối | Output (mục 2) |
   | 6 | B trả lời «sure thing» → `Mark replied` → hiện ở Needs attention → `Mark handled` | Có `replied_at`, `reply_text`, `handled_at`; Needs attention trống lại | `gd-7-track-b.png`, dòng CSDL |
   | 7 | Tổng chi phí từ bảng `usage` | 0 dòng, 0 USD | Output (mục 2) |
 
@@ -108,8 +108,16 @@ git grep -nE "sk-ant-|ghp_|github_pat_"
 docs/quy_trinh_trien_khai.md:848:  - `git grep -nE "sk-ant-|ghp_|github_pat_"` không ra dòng nào.
 pytest -q → 140 passed in 19.03s
 ```
-Dòng duy nhất khớp là chính dòng quy trình chứa mẫu tìm. Mẫu chặt hơn (`sk-ant-[A-Za-z0-9_-]{10,}|ghp_[A-Za-z0-9]{20,}|
+Lúc đo, dòng khớp duy nhất là chính dòng quy trình chứa mẫu tìm. Từ khi có báo cáo này, 4 dòng của chính khối trên cũng khớp. Mẫu chặt hơn (`sk-ant-[A-Za-z0-9_-]{10,}|ghp_[A-Za-z0-9]{20,}|
 github_pat_[A-Za-z0-9_]{20,}`): `HEAD: 0 files`, `all history: 0 hits`, `revs scanned: 59`.
+
+Chạy lại sau rà soát (`gd-7-ra-soat.md`). Bản clone thử `data/t73` từng làm `pytest -q` ở gốc repo hỏng (`11 errors`, trùng tên test), nên đã thêm `pytest.ini` với `testpaths = tests`:
+```
+git ls-files | grep -E '(^|/)\.env$|^data/|\.db$'   → (không có dòng nào)
+git grep, mẫu chặt hơn ở HEAD                        → (không có dòng nào)
+pytest -q                                            → 140 passed in 17.55s
+pytest -q -p nonet                                   → [nonet] blocked network attempts: 0 []  ·  140 passed in 16.29s
+```
 
 ## 3. Lệch so với kế hoạch
 
@@ -144,5 +152,5 @@ github_pat_[A-Za-z0-9_]{20,}`): `HEAD: 0 files`, `all history: 0 hits`, `revs sc
 ## 5. Câu hỏi cho người dùng
 
 - 12 bản nháp cho người thật trong `data/outreach.db`: giữ, từ chối, hay xoá cả CSDL? Tệp này nằm ngoài git.
-- Bản clone thử `data/t73` (439 MB, ngoài git): xoá được không?
+- Bản clone thử `data/t73` (439 MB, ngoài git): xoá được không? (14/11: thư mục không còn trong `data/`.)
 - Bảng hồ sơ ở tab Find vẫn có liên kết X, theo kế hoạch (`gd-6-ra-soat.md`). Giữ hay bỏ?

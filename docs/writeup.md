@@ -47,10 +47,10 @@ stayed empty.
 
 ## How AI tools were used and checked
 
-Claude wrote the plan and reviewed every stage. Antigravity wrote stages 1–2b; from stage 3 Claude also wrote the code.
-Each stage ended with a review by a fresh Claude subagent that had not written it: it read the diff, reran the tests
-with the network blocked, and tried failure cases. These reviews sent stage 2 back (its live check had not been run),
-caught a test that called the real network, and found 3 must-fix UI bugs, such as a second browser tab silently
-clearing a do-not-contact flag. Every fix came with a test that failed first. 140 tests, none touching the network.
+Claude wrote the plan and reviewed stages 1–2. Antigravity wrote stages 1–2b; from stage 3 Claude also wrote the code,
+and each stage was reviewed by a fresh Claude subagent that had not written it: it read the diff and tried failure
+cases, and from stage 4 it also reran the tests with the network blocked. These reviews sent stage 2 back (its live
+check had not been run), caught a test that called the real network, and found 3 must-fix UI bugs, such as a second browser tab silently
+clearing a do-not-contact flag. Every code fix came with a test that failed first. 140 tests, none touching the network.
 In the product, the evidence check and human approval keep model output from going out unchecked. The live run sent
 one real DM, to my own test account, which replied.
