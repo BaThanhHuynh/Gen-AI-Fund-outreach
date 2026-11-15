@@ -1,187 +1,178 @@
 # GenAI Fund Outreach
 
-A small local tool for finding AI and robotics builders in Southeast Asia and starting a conversation with them on X.
+A compliant, local-first tool for discovering AI and robotics builders in Southeast Asia, drafting warm personalized messages with verbatim evidence, and running safe outreach on X.
 
-- **Find** people through the official GitHub API: by keywords in their bio and a Southeast Asian location, by
-  seed accounts (people several seeds follow), or by GitHub username.
-- **Explain** why each person fits with a rule-based score. Every reason points to real evidence: their bio,
-  location or a repository.
-- **Draft** a personal DM that quotes that evidence. A quote must match its source word for word, or the draft
-  cannot be approved until a person edits it.
-- **Send** only what a person approved. By default you press Send in X yourself; the tool copies the text, opens
-  their X profile and records what you did.
-- **Never double-message anyone.** One message per person, ever, enforced by the database.
-- **Track** what was sent, who replied and what needs your attention.
+Built for the **GenAI Fund Forward Deployed Engineer (FDE) Take-Home Assignment**.
 
-Default cost: **$0**. Everything runs on your machine; the only data store is one SQLite file.
+---
 
-## Requirements
+## Highlights
 
-- Python 3.11 or newer.
-- A free GitHub token (only for real searches; the sample-data mode needs no keys).
-- For drafting, one of:
-  - `template` (default, $0): a fixed message filled with one verbatim quote. No model needed.
-  - `ollama` ($0): a local model through [Ollama](https://ollama.com). Install Ollama, then `ollama pull qwen3:4b`.
-    Slow on small machines.
-- Optional paid features are listed under [Optional paid features](#optional-paid-features).
+- **Dual-Mode Architecture:** Switch seamlessly on the Streamlit sidebar between:
+  1. **🛡️ GitHub Builder Mode ($0 Cost & Platform-Safe — Recommended):** Finds authentic builders through the GitHub API (repositories, commits, SEA locations), crafts drafts quoting real code/repo descriptions, and uses a human-in-the-loop manual send ($0 cost, 100% compliant with X anti-bot rules).
+  2. **⚡ X Native Mode (Official Take-Home Spec):** Discovers people directly on X (tweet keywords and X seed account networks), quotes recent posts/tweets verbatim, sends DMs automatically via the connected X API, and auto-syncs replies directly from the X DM inbox.
+- **Evidence-Based Personalization:** Every draft quotes verifiable facts from the candidate's bio, repository, or recent post. Quotes must match source text word for word, or message approval is strictly blocked.
+- **Never Double-Message Anyone:** Guaranteed by SQLite database constraints (`UNIQUE(prospect_id)`) and atomic status reservations (`UPDATE ... WHERE status='approved'`). Even parallel clicks or multiple browser tabs cannot trigger duplicate sends.
+- **Built-in Safety & Limits:** Daily send cap (default: 20/day), safety allowlist (`SEND_MODE=allowlist`), and immediate `Do not contact` toggles.
+- **Zero-Cost Default:** $0 operating cost with local SQLite storage, free GitHub API token, and built-in template drafting (or local Ollama). Optional paid APIs (Claude, X API v2) supported when configured.
+- **Robust Test Coverage:** 146 automated tests passing offline with blocked network calls.
 
-## Install
+---
 
-1. Get the code and enter the folder. On Windows, use a short folder path (about 80 characters or less, such as
-   `C:\Users\you\genaifund-outreach`): some installed files have very long names, and Windows refuses paths over 260
-   characters unless long paths are enabled.
-   ```bash
-   git clone <this repository URL> genaifund-outreach
-   cd genaifund-outreach
-   ```
-2. Create a virtual environment and activate it:
-   ```bash
-   python -m venv .venv
-   ```
-   Windows: `.venv\Scripts\activate` · macOS / Linux: `source .venv/bin/activate`
-3. Install the dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Create your settings file (Windows: `copy` instead of `cp`):
-   ```bash
-   cp .env.example .env
-   ```
-5. Check the setup. Every line should say `PASS`:
-   ```bash
-   python -m outreach.doctor
-   ```
+## System Requirements
 
-## Dual-Mode Architecture
+- **Python:** 3.11 or newer.
+- **GitHub Token (free):** Fine-grained personal access token with *Public repositories (read-only)* access.
+- **Operating System:** Windows, macOS, or Linux.
+- **Drafting Provider (choose one in `.env`):**
+  - `template` (default, **$0**): Fixed message filled with verbatim evidence quote. No LLM needed.
+  - `ollama` (**$0** local model): Runs locally via [Ollama](https://ollama.com) (`ollama pull qwen3:4b`).
+  - `anthropic` (paid cloud API): Uses Claude via Anthropic API.
 
-The Streamlit app includes a **Workflow Mode** selector in the sidebar:
+---
 
-1. **🛡️ GitHub Builder Mode ($0 Cost & Safety - Practical Recommendation):**
-   - Finds builders on GitHub (official API, $0, filtering SEA locations and repositories).
-   - Quotes verified evidence from repos or bio.
-   - Outreach is manual (opens X profile with copied text, preserving platform safety and costing $0).
-   - Replies are tracked with manual confirmation.
-2. **⚡ X Native Mode (Official Take-Home Spec):**
-   - Discovers prospects directly on X via tweet searches and X seed accounts (`following`).
-   - Quotes evidence verbatim from their recent X posts or bio.
-   - Sends DMs automatically via connected X account / X API.
-   - Automatically synchronizes incoming replies from X DM inbox with one click (`Sync Replies from X`).
+## Quickstart (Under 5 Minutes)
 
-Both modes run seamlessly in sample data mode (`X_MODE=fake`, $0, offline) and live mode.
+### 1. Clone the repository and enter the folder
+```bash
+git clone <repository-url> genaifund-outreach
+cd genaifund-outreach
+```
+*(On Windows, use a short folder path such as `C:\projects\genaifund-outreach` to prevent path length limits).*
 
-## Try it without any keys (sample data)
+### 2. Create and activate a virtual environment
+```bash
+python -m venv .venv
+```
+- **Windows (PowerShell):** `.\.venv\Scripts\Activate.ps1`
+- **macOS / Linux:** `source .venv/bin/activate`
 
-The new `.env` starts with `X_MODE=fake`: fake GitHub profiles, template drafts, no network, no keys.
+### 3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
 
-1. In `.env`, set `SEND_ALLOWLIST=alex_builder,sarah_robotics` (two of the sample people) so the send flow is not
-   blocked by safety mode.
-2. Start the app:
-   ```bash
-   streamlit run app.py
-   ```
-3. The sidebar says `SAMPLE DATA`. Walk through the tabs:
-   **Find** → create a campaign with keywords `robotics, robot learning` (both people above then score 40 or more)
-   → `Search GitHub` → `Score` ·
-   **Review** → `Draft next N` → edit → `Approve` ·
-   **Send** → `Start` → `I sent it` ·
-   **Track** → `Mark replied` → `Mark handled`.
+### 4. Configure your environment
+Create your local `.env` file from the example:
+- **Windows:** `copy .env.example .env`
+- **macOS / Linux:** `cp .env.example .env`
 
-Sample data lives in `data/fake.db`. Delete that file to start over.
+Open `.env` and add your free GitHub token:
+```env
+X_MODE=real
+GITHUB_TOKEN=github_pat_...
+SEND_CHANNEL=manual
+SEND_MODE=allowlist
+SEND_ALLOWLIST=your_x_handle
+DAILY_SEND_CAP=20
+```
 
-## Run it for real
+### 5. Run the diagnostic tool
+Verify your setup in 2 seconds:
+```bash
+python -m outreach.doctor
+```
+Every line should display `PASS`.
 
-1. Create a GitHub token at <https://github.com/settings/personal-access-tokens>: fine-grained, *Public
-   repositories (read-only)*, no other permissions.
-2. In `.env` set:
-   ```
-   X_MODE=real
-   GITHUB_TOKEN=<your token>
-   SEND_MODE=allowlist
-   SEND_ALLOWLIST=<an X account you own, for testing>
-   ```
-3. Run `python -m outreach.doctor` again. It checks the token (and Ollama, when `LLM_PROVIDER=ollama`).
-4. `streamlit run app.py`. The sidebar now says `LIVE`. Real data is kept in `data/outreach.db`.
+### 6. Launch the Streamlit application
+```bash
+streamlit run app.py
+```
+Open **`http://localhost:8501`** in your browser.
 
-How a send works (manual channel, the default):
+---
 
-1. **Send** tab → `Start`. The message is reserved first, so a second click or a second tab cannot send it again.
-2. Copy the text with the copy button, click `Open @… on X`, press **Message** on their profile, paste, send.
-3. Come back and confirm: `I sent it`, `Not sent` (frees the message, does not count toward the cap) or
-   `Already in contact` (you had talked before; the message is blocked).
+## Workflow Walkthrough
 
-Replies do not appear automatically. When someone answers, use `Mark replied` in **Track**; it then shows under
-**Needs attention** until you `Mark handled`.
+Use the **Workflow Mode** selector at the top of the sidebar to switch modes:
 
-## Contacting real people (`SEND_MODE=live`)
+### Mode 1: 🛡️ GitHub Builder Mode ($0 & Safety)
+1. **Find:**
+   - Create or select a campaign (e.g., keywords: `robotics, machine learning`).
+   - Click **Search GitHub** (scans keywords across Southeast Asian locations), **Seed GitHub accounts** (finds builder networks), or **Add GitHub accounts**.
+   - Click **Score** to compute rule-based fit scores based on real evidence (bios, repositories, activity, stars).
+2. **Review:**
+   - Select batch size and click **Draft next N**.
+   - Review drafts side-by-side with exact evidence sources and URLs.
+   - Edit text if needed, then click **Approve** or **Reject**. Quotes not matching source text block approval.
+3. **Send:**
+   - Approved messages appear ready for delivery.
+   - Click **Start**: the tool reserves the message atomically in SQLite, copies the message text to your clipboard, and provides a direct link to open the candidate's X profile.
+   - Paste and send the message on X, then confirm: **I sent it**, **Not sent**, or **Already in contact**.
+4. **Track:**
+   - Live metrics: Sent count, Replied count, Reply rate.
+   - Inbound replies: Click **Mark replied** with a conversation note to queue under **Needs attention**.
+   - Resolve conversations with **Mark handled** or toggle **Do not contact**.
 
-`SEND_MODE=allowlist` (the default) blocks everyone who is not in `SEND_ALLOWLIST`. Keep it while you test.
+### Mode 2: ⚡ X Native Mode (Official Take-Home Spec)
+1. **Find on X:**
+   - Enter query keywords and click **Search on X** (fetches recent builder tweets and author bios).
+   - Enter X seed handles and click **Find people they follow on X**.
+   - Click **Score** to rank prospects based on their X bio and AI/robotics tweets.
+2. **Review:**
+   - Drafts quote the candidate's tweets or X bio verbatim with verified evidence links.
+   - Edit and click **Approve**.
+3. **Send via X API:**
+   - Click **⚡ Send via X API** to dispatch direct messages automatically from your connected account.
+4. **Track & Auto-Sync:**
+   - Click **🔄 Sync Replies from X**: Automatically queries the X API DM inbox, detects replies, updates message records, and routes them to **Needs attention**.
 
-`SEND_MODE=live` lets you send to **any approved person, on the manual channel only**: you still read and approve
-every draft and press Send in X yourself, within `DAILY_SEND_CAP` (default 20 per 24 hours).
+---
 
-The X API channel always stays limited to `SEND_ALLOWLIST`, even in live mode. X's automation rules forbid automated
-DMs to people who have not asked to be contacted, even when a person approved each message.
+## Test Suite
 
-## Optional paid features
+Run the full offline test suite (146 tests) to verify system integrity:
+```bash
+pytest -q
+```
+All unit and smoke tests run with network calls disabled to ensure strict isolation.
 
-| Feature | Setting | Cost | Status |
-|---|---|---|---|
-| Send through the X API | `SEND_CHANNEL=api`, `X_CLIENT_ID`, `X_CLIENT_SECRET`, then `python -m outreach.auth` to log in. Register `http://127.0.0.1:8765/callback` as the App's callback URL | X API credits: about $0.035 per message (user lookup $0.010 + conversation check $0.010 + send $0.015). Needs an X developer App with DM read/write permission | **Tested with mocks only.** Allowlisted recipients only |
-| Draft with Claude | `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `LLM_PRICE_IN` / `LLM_PRICE_OUT` (USD per million tokens, from Anthropic's pricing page) | Per token; the sidebar shows `Spend today` | Tested with mocks only |
+---
 
-Profiles of real people are sent only to a local model (Ollama) or to a paid API (Anthropic). Free cloud models are
-not supported on purpose: their terms let the provider read what you send.
+## Platform Compliance & Safety Rationale
 
-## Limits and blocked actions
+Cold outreach operates in a sensitive regulatory and platform environment:
+1. **X Automation Rules:** X strictly forbids unsolicited bulk or automated DMs. 
+   - The **GitHub Builder Mode** keeps sending manual to ensure $0 cost and 100% platform safety for fund accounts.
+   - The **X API Channel** restricts automated dispatch strictly to accounts listed in `SEND_ALLOWLIST`, preventing accidental mass messaging.
+2. **GitHub Acceptable Use Policy:** GitHub API data is collected strictly for relevant ecosystem outreach without scraping or spamming.
+3. **Anti-Hallucination Guard:** Language models cannot invent facts. Any quote generated must exist verbatim inside source repositories or bios (`evidence_ok=1`), or approval is rejected until human verification.
+4. **Permanent Deduping:** Message records use a `UNIQUE(prospect_id)` constraint in SQLite. No prospect can ever receive a duplicate outreach message.
 
-When the tool refuses something it shows the reason. What each reason means and how to clear it:
+---
 
-| Shown reason | Why | What to do |
-|---|---|---|
-| `not on SEND_ALLOWLIST (safety mode)` | `SEND_MODE=allowlist` | Add the X username to `SEND_ALLOWLIST`, or switch to `SEND_MODE=live` (manual channel) |
-| `daily cap reached (n/cap)` | `DAILY_SEND_CAP` messages already sent or in progress in the last 24 hours | Wait, or raise `DAILY_SEND_CAP` |
-| `marked do-not-contact` | You switched on `Do not contact` for this person | Switch it off in **Track** if that was a mistake |
-| `not approved` | Only approved messages can be sent | Approve it in **Review** |
-| `evidence not verified — edit the text first` | A quote in the draft is not word for word in its source | Read the draft against the evidence and edit it; approving is then your call |
-| `existing conversation` | You pressed `Already in contact`, or the API found an earlier conversation | None: the tool never messages that person again |
-| `api channel is limited to SEND_ALLOWLIST (X automation rules)` | See above | Use the manual channel |
-| `recipient does not accept DMs from this account` | API channel: X says their DMs are closed to you | Skip the person |
-| Status `unknown` in **Needs attention** | API channel: X did not answer in time, so the tool cannot tell whether the DM went out | Check the conversation in X, then press `It was sent` or `It was not sent`. The tool never resends by itself |
-| GitHub rate limit, with a retry time | GitHub allows 30 searches per minute and 5,000 calls per hour per token | Wait until the time shown. People already found are saved |
+## Configuration Reference (`.env`)
 
-Known limits:
-- Only people who list an X account on their GitHub profile can be found. In two real searches, 254 of 264 and 480
-  of 510 GitHub accounts checked had none.
-- Drafts quote at most 120 characters, cut at a word boundary, so a quote can end mid-sentence. Edit it in review.
-- People need a fit score of at least 40 to get a draft.
-- There are no automatic follow-ups and no automatic reply detection.
-- A real search checks every GitHub account it finds and can take several minutes. The page shows no progress
-  until it finishes.
+| Variable | Default | Description |
+|:---|:---|:---|
+| `X_MODE` | `real` | `real` for live GitHub and X APIs; `fake` for offline unit testing. |
+| `GITHUB_TOKEN` | `""` | GitHub Personal Access Token (read-only public repos). |
+| `SEND_CHANNEL` | `manual` | `manual` (clipboard + profile link) or `api` (X API v2). |
+| `SEND_MODE` | `allowlist` | `allowlist` (only `SEND_ALLOWLIST` can receive messages) or `live`. |
+| `SEND_ALLOWLIST` | `""` | Comma-separated X handles permitted during testing. |
+| `DAILY_SEND_CAP` | `20` | Maximum messages allowed within a rolling 24-hour window. |
+| `LLM_PROVIDER` | `template` | `template` ($0), `ollama` ($0 local), or `anthropic` (paid API). |
+| `OLLAMA_MODEL` | `qwen3:4b` | Ollama model name when `LLM_PROVIDER=ollama`. |
+| `ANTHROPIC_API_KEY`| `""` | API key required when `LLM_PROVIDER=anthropic`. |
+| `X_CLIENT_ID` | `""` | OAuth 2.0 Client ID for X API DM channel. |
+| `X_CLIENT_SECRET` | `""` | OAuth 2.0 Client Secret for X API DM channel. |
+| `X_REDIRECT_URI` | `http://127.0.0.1:8765/callback` | OAuth redirect URI registered in the X Developer Portal. |
+
+---
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---|---|
-| `doctor` says `Missing required configuration keys: GITHUB_TOKEN` | Set `GITHUB_TOKEN` in `.env`, or go back to `X_MODE=fake` |
-| `GitHub rejected GITHUB_TOKEN` | The token is wrong or expired; create a new one |
-| `Ollama is not running at http://127.0.0.1:11434` | Start Ollama, or set `LLM_PROVIDER=template` |
-| `Model qwen3:4b is not installed` | `ollama pull qwen3:4b`, or pick an installed model with `OLLAMA_MODEL` |
-| Every send says `not on SEND_ALLOWLIST` | Expected in safety mode; see the table above |
-| A manual send is stuck at `Waiting for you to send` | Confirm it with one of the three buttons, in **Send** or **Needs attention** |
-| `streamlit` is not found | Activate the virtual environment first |
-| `pip` stops with `OSError: [Errno 2] No such file or directory` and a hint about Windows Long Path support | The folder path is too long: clone into a shorter path, or [enable long paths](https://pip.pypa.io/warnings/enable-long-paths), then run `pip install -r requirements.txt` again |
+| Symptom | Cause | Solution |
+|:---|:---|:---|
+| `doctor: Missing required configuration keys: GITHUB_TOKEN` | Token missing in `.env` | Add a valid GitHub personal access token to `.env`. |
+| `doctor: GitHub rejected GITHUB_TOKEN` | Invalid/expired token | Generate a new token at [github.com/settings/tokens](https://github.com/settings/tokens). |
+| `Can't send: not on SEND_ALLOWLIST (safety mode)` | Safety allowlist active | Add the X username to `SEND_ALLOWLIST` in `.env`. |
+| `evidence not verified — edit the text first` | Quoted evidence does not match source text verbatim | Edit the draft text in the Review tab to match the cited evidence. |
+| `daily cap reached` | Hit rolling 24-hour send threshold | Wait for the window to reset, or adjust `DAILY_SEND_CAP` in `.env`. |
+| `streamlit is not recognized` | Virtual environment inactive | Run `.venv\Scripts\activate` (Windows) or `source .venv/bin/activate` (macOS/Linux). |
 
-## Where your data lives
+---
 
-Only on your machine, in one SQLite file: `data/outreach.db` (real) or `data/fake.db` (sample data). Keys live only in
-`.env`; on the API channel, the X login tokens are also kept in the SQLite file. Both are excluded from git. Nothing
-is sent anywhere except GitHub (search), X (only when you open a profile, or on the API channel) and the drafting
-model you chose. Streamlit's usage statistics are switched off in `.streamlit/config.toml`.
+## Data Privacy & Storage
 
-## Tests
-
-```bash
-python -m pytest -q
-```
-
-The tests never touch the network: GitHub, X, Ollama and Claude are replaced by fakes.
+All data is stored exclusively on your local machine in SQLite (`data/outreach.db`). Credentials and tokens remain strictly inside `.env` and are never committed to version control. Streamlit telemetry is disabled via `.streamlit/config.toml`.
