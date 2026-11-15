@@ -204,6 +204,18 @@ class FakeXClient:
         record_usage(self.conn, "dm_read", len(events))
         return events
 
+    def simulate_reply(self, user_id: str, text: str, conv_id: str | None = None) -> dict[str, Any]:
+        """Simulate an incoming DM event from user_id into inbox for local testing."""
+        event = {
+            "id": f"fake_reply_{len(self.inbox) + 1}",
+            "sender_id": user_id,
+            "text": text,
+            "created_at": "2026-11-15T12:00:00Z",
+            "dm_conversation_id": conv_id or f"fake_conv_{user_id}",
+        }
+        self.inbox.insert(0, event)
+        return event
+
     def dm_events(self, stop_at_id: str | None = None) -> list[dict[str, Any]]:
         """Return simulated DM inbox events, stopping at stop_at_id if provided."""
         self._check_fail_next()

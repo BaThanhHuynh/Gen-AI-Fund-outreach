@@ -26,8 +26,8 @@ def parse_float_env(var_name: str, value: str | None, default: float = 0.0) -> f
         raise ValueError(f"Invalid float value for {var_name}: '{value}'")
 
 
-# Mode settings
-X_MODE: str = validate_choice("X_MODE", os.getenv("X_MODE", "fake"), ("fake", "real"))
+# Mode settings: default to real live data
+X_MODE: str = validate_choice("X_MODE", os.getenv("X_MODE", "real"), ("fake", "real"))
 X_CLIENT_ID: str = os.getenv("X_CLIENT_ID", "")
 X_CLIENT_SECRET: str = os.getenv("X_CLIENT_SECRET", "")
 X_REDIRECT_URI: str = os.getenv("X_REDIRECT_URI", "http://127.0.0.1:8765/callback")

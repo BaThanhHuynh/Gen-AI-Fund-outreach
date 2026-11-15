@@ -52,6 +52,23 @@ Default cost: **$0**. Everything runs on your machine; the only data store is on
    python -m outreach.doctor
    ```
 
+## Dual-Mode Architecture
+
+The Streamlit app includes a **Workflow Mode** selector in the sidebar:
+
+1. **🛡️ GitHub Builder Mode ($0 Cost & Safety - Practical Recommendation):**
+   - Finds builders on GitHub (official API, $0, filtering SEA locations and repositories).
+   - Quotes verified evidence from repos or bio.
+   - Outreach is manual (opens X profile with copied text, preserving platform safety and costing $0).
+   - Replies are tracked with manual confirmation.
+2. **⚡ X Native Mode (Official Take-Home Spec):**
+   - Discovers prospects directly on X via tweet searches and X seed accounts (`following`).
+   - Quotes evidence verbatim from their recent X posts or bio.
+   - Sends DMs automatically via connected X account / X API.
+   - Automatically synchronizes incoming replies from X DM inbox with one click (`Sync Replies from X`).
+
+Both modes run seamlessly in sample data mode (`X_MODE=fake`, $0, offline) and live mode.
+
 ## Try it without any keys (sample data)
 
 The new `.env` starts with `X_MODE=fake`: fake GitHub profiles, template drafts, no network, no keys.

@@ -71,15 +71,16 @@ def template_draft(sender_context: str, prospect: dict, sources: dict[str, str],
     keyword_repos = (r["source_id"] for r in fit.get("reasons", []) if " is about " in r["claim"])
     for sid in dict.fromkeys(keyword_repos):
         name, sep, desc = sources.get(sid, "").partition(": ")
-        if sid.startswith("repo:") and sep and len(_cut(desc)) >= config.MIN_QUOTE_CHARS:
-            quote, where = _cut(desc), f"{name} on GitHub"
+        if (sid.startswith("repo:") or sid.startswith("post:")) and sep and len(_cut(desc)) >= config.MIN_QUOTE_CHARS:
+            quote = _cut(desc)
+            where = "your post on X" if sid.startswith("post:") else f"{name} on GitHub"
             break
     else:
         sentences = re.split(r"(?<=[.!?])\s+|\n", sources.get("bio", ""))
         quote = next((_cut(s) for s in sentences if len(_cut(s)) >= config.MIN_QUOTE_CHARS), None)
         if quote is None:
             raise LLMUnavailable("no quotable evidence")
-        sid, where = "bio", "your GitHub profile"
+        sid, where = "bio", "your GitHub profile" if prospect.get("github_login") else "your X profile"
     text = (f'Hi {_first_name(prospect)}, I came across {where}: "{quote}". '
             f"{sender_context.strip()} What are you focusing on next?")
     return {"text": text, "evidence": [{"source_id": sid, "quote": quote}]}

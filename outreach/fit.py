@@ -61,7 +61,8 @@ def score_fit(prospect: dict, repos: list[dict], keywords: list[str], today: str
         hits = keyword_hits(_repo_text(r), keywords)
         if hits:
             repo_points += REPO_POINTS
-            reasons.append({"claim": f"Repo {r['name']} is about {', '.join(hits)}",
+            prefix = "Post" if str(r["source_id"]).startswith("post:") else f"Repo {r['name']}"
+            reasons.append({"claim": f"{prefix} is about {', '.join(hits)}",
                             "source_id": r["source_id"]})
     if not reasons:
         return {"score": 0, "category": category, "reasons": []}
@@ -72,7 +73,8 @@ def score_fit(prospect: dict, repos: list[dict], keywords: list[str], today: str
               and (day - date.fromisoformat(r["pushed_at"][:10])).days <= ACTIVE_DAYS]
     if active:
         score += ACTIVE_POINTS
-        reasons.append({"claim": f"Pushed code to {active[0]['name']} in the last {ACTIVE_DAYS} days",
+        verb = "Posted on X" if str(active[0]["source_id"]).startswith("post:") else f"Pushed code to {active[0]['name']}"
+        reasons.append({"claim": f"{verb} in the last {ACTIVE_DAYS} days",
                         "source_id": active[0]["source_id"]})
 
     top = max(repos, key=lambda r: r.get("stars") or 0, default=None)

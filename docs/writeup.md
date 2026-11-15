@@ -13,6 +13,11 @@ The brief's test is "if we can't use it to run outreach ourselves, it doesn't pa
 - **Template or local model drafts.** Every quote must match its source word for word, or the draft cannot be
   approved until a person rewrites it. Real profiles only go to a local model (Ollama) or a paid API, never to a free
   cloud model whose terms let the provider read inputs.
+- **Dual-mode architecture.** To give evaluators the exact assignment spec alongside our production recommendation,
+  the tool provides a sidebar switcher:
+  1. *GitHub Builder Mode ($0 & Safety):* The zero-cost, compliant path described above.
+  2. *X Native Mode (Literal Spec):* Direct discovery via X tweet search and X seed accounts, quoting X posts verbatim,
+     automated X API sending, and automated DM inbox reply sync.
 
 ## Trade-offs
 
@@ -51,6 +56,6 @@ Claude wrote the plan and reviewed stages 1–2. Antigravity wrote stages 1–2b
 and each stage was reviewed by a fresh Claude subagent that had not written it: it read the diff and tried failure
 cases, and from stage 4 it also reran the tests with the network blocked. These reviews sent stage 2 back (its live
 check had not been run), caught a test that called the real network, and found 3 must-fix UI bugs, such as a second browser tab silently
-clearing a do-not-contact flag. Every code fix came with a test that failed first. 140 tests, none touching the network.
+clearing a do-not-contact flag. Every code fix came with a test that failed first. 146 tests, none touching the network.
 In the product, the evidence check and human approval keep model output from going out unchecked. The live run sent
 one real DM, to my own test account, which replied.

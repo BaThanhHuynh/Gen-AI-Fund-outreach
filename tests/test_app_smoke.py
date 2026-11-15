@@ -147,3 +147,70 @@ def test_approved_message_can_be_rejected_in_send(tmp_path, monkeypatch):
     at.button(key=f"send_reject_{mid}").click().run()
     assert conn.execute("SELECT status FROM messages WHERE id = ?", (mid,)).fetchone()[0] == "rejected"
     conn.close()
+
+
+def test_x_native_mode_smoke(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "X_MODE", "fake")
+    monkeypatch.setattr(config, "SEND_ALLOWLIST", ["alex_builder", "sarah_robotics"])
+    at = _app(tmp_path, monkeypatch).run()
+
+    # Switch to X Native Mode
+    at.radio(key="app_workflow_mode").set_value("⚡ X Native Mode (Official Take-Home Spec)").run()
+    assert not at.exception
+
+    # Create campaign
+    at.text_input(key="c_name").input("Robotics on X")
+    at.text_area(key="c_segment").input("AI builders on X")
+    at.text_input(key="c_keywords").input("robotics, embodied AI, robot learning")
+    at.text_area(key="c_context").input("GenAI Fund exploring AI teams.")
+    at.button(key="c_create").click().run()
+
+    # Search on X
+    at.button(key="x_search").click().run()
+    assert not at.exception
+
+    # Score
+    at.button(key="score").click().run()
+    assert not at.exception
+
+    # Draft
+    at.button(key="draft").click().run()
+    assert not at.exception
+
+    conn = db.connect(config.DB_PATH)
+    row = conn.execute("SELECT m.id, p.x_user_id, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
+                       "WHERE p.x_username = 'alex_builder'").fetchone()
+    assert row is not None
+    mid = row["id"]
+
+    # Approve
+    at.button(key=f"approve_{mid}").click().run()
+
+    # Send via X API
+    at.button(key=f"api_{mid}").click().run()
+    assert not at.exception
+
+    # Check that message is sent
+    m = conn.execute("SELECT status, channel FROM messages WHERE id = ?", (mid,)).fetchone()
+    assert m["status"] == "sent"
+    assert m["channel"] == "api"
+
+    # Simulate reply directly in session state & Sync
+    at.session_state.fake_inbox.insert(
+        0,
+        {
+            "id": "reply_test_1",
+            "sender_id": row["x_user_id"],
+            "text": "Excited to connect! Let's chat about AI & robotics.",
+            "created_at": "2026-11-15T12:00:00Z",
+            "dm_conversation_id": f"conv_{row['x_user_id']}",
+        },
+    )
+    at.button(key="sync_x_replies_btn").click().run()
+    assert not at.exception
+
+    # Verify replied
+    m = conn.execute("SELECT replied_at, reply_text FROM messages WHERE id = ?", (mid,)).fetchone()
+    assert m["replied_at"] is not None
+    assert "Excited to connect" in m["reply_text"]
+    conn.close()

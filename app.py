@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-from outreach import auth, config, db, discover, fit, llm, review, sender
+from outreach import auth, config, db, discover, fit, llm, review, sender, x_discover, x_sync
 from outreach.github import GitHubError, GitHubRateLimited, get_github
 from outreach.xclient import get_x
 
@@ -16,6 +16,16 @@ st.set_page_config(page_title="GenAI Fund outreach", layout="wide")
 conn = db.connect()
 if "recovered" not in st.session_state:  # once per browser session: API sends that never got an answer -> unknown
     st.session_state.recovered = sender.recover_stuck(conn)
+
+
+def get_app_x(db_conn):
+    """Return X client for current thread, sharing simulated inbox in session_state across reruns."""
+    x = get_x(db_conn)
+    if config.X_MODE == "fake":
+        if "fake_inbox" not in st.session_state:
+            st.session_state.fake_inbox = []
+        x.inbox = st.session_state.fake_inbox
+    return x
 
 
 def rows(sql: str, *params) -> list:
@@ -39,11 +49,16 @@ def manual_buttons(mid: int, where: str) -> None:
             act(sender.confirm_manual, conn, mid, outcome)
 
 
-SAFE_SOURCE = re.compile(r"bio|location|repo:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")  # source ids come from a model
+SAFE_SOURCE = re.compile(r"bio|location|repo:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+|post:[A-Za-z0-9_.-]+")  # source ids come from a model
 
 
-def source_url(login: str, source_id: str) -> str:
-    return f"https://github.com/{source_id[5:]}" if source_id.startswith("repo:") else f"https://github.com/{login}"
+def source_url(login: str, source_id: str, x_username: str = "") -> str:
+    if source_id.startswith("repo:"):
+        return f"https://github.com/{source_id[5:]}"
+    elif source_id.startswith("post:"):
+        pid = source_id[5:]
+        return f"https://x.com/{x_username}/status/{pid}" if x_username else f"https://x.com/i/web/status/{pid}"
+    return f"https://github.com/{login}" if login else f"https://x.com/{x_username}"
 
 
 def today_start_utc() -> str:
@@ -55,16 +70,39 @@ if note := st.session_state.pop("flash", None):
     st.info(note)
 
 with st.sidebar:
-    st.subheader("SAMPLE DATA" if config.X_MODE == "fake" else "LIVE")
-    if config.SEND_CHANNEL == "manual":
-        st.write("Channel: Manual — you send in X")
-    else:
-        st.write("Channel: X API")
+    st.subheader("WORKFLOW MODE")
+    mode = st.radio(
+        "Approach",
+        [
+            "🛡️ GitHub Builder Mode ($0 Cost & Safety)",
+            "⚡ X Native Mode (Official Take-Home Spec)",
+        ],
+        index=0,
+        key="app_workflow_mode",
+        help="Switch between zero-cost GitHub discovery ($0, platform-safe) and direct X-native discovery & automation."
+    )
+    is_x_native = mode.startswith("⚡")
+    st.markdown("---")
+    st.subheader("TEST MODE (OFFLINE)" if config.X_MODE == "fake" else "LIVE (REAL DATA)")
+    if is_x_native:
+        st.caption("Mode: Direct X Discovery & Automation")
+        st.write("Channel: X API v2 (Direct)")
         me = db.kv_get(conn, "me")
         if me:
             st.write(f"Connected as @{me['username']}")
-        elif st.button("Connect X account"):
+        elif st.button("Connect X account", key="connect_x_btn"):
             act(auth.login, conn)
+    else:
+        st.caption("Mode: GitHub Discovery & Manual Outreach")
+        if config.SEND_CHANNEL == "manual":
+            st.write("Channel: Manual — you send in X")
+        else:
+            st.write("Channel: X API")
+            me = db.kv_get(conn, "me")
+            if me:
+                st.write(f"Connected as @{me['username']}")
+            elif st.button("Connect X account", key="connect_x_btn"):
+                act(auth.login, conn)
     if config.X_MODE == "fake" or config.LLM_PROVIDER == "template":
         writer = "template"
     else:
@@ -112,29 +150,70 @@ with find_tab:
         def logins(raw: str) -> list[str]:
             return [s.strip().lstrip("@") for s in raw.split(",") if s.strip()]
 
-        phrases = [k.strip() for k in camps[cid]["keywords"].split(",") if k.strip()]
-        st.caption(f"Search GitHub runs {len(discover.search_queries(phrases))} searches "
-                   "(each keyword × each Southeast Asian location).")
-        if st.button("Search GitHub", key="search"):
-            find_people(discover.discover_by_segment, phrases)
-        seeds = st.text_input("Seed GitHub accounts (comma-separated)", key="seeds")
-        if st.button("Find people they follow", key="seed_go") and logins(seeds):
-            find_people(discover.discover_by_seeds, logins(seeds))
-        adds = st.text_input("Add GitHub accounts (comma-separated)", key="adds")
-        if st.button("Add", key="add_go") and logins(adds):
-            find_people(discover.import_logins, logins(adds))
-        if st.button("Score", key="score"):
-            st.success(f"Scored {fit.score_campaign(conn, cid)} people.")
+        if is_x_native:
+            st.markdown("##### ⚡ Direct Discovery on X (Tweets & Bios)")
+            st.caption("Search recent builder tweets, discover who X seed accounts follow, or import X handles.")
+            x_query = st.text_input("Keywords on X (searches tweets & bios)",
+                                    value=camps[cid]["keywords"], key="x_search_q")
+            col_x1, _ = st.columns([1, 1])
+            if col_x1.button("Search on X", key="x_search"):
+                try:
+                    c = x_discover.discover_by_x_search(conn, get_app_x(conn), cid, x_query, max_results=10)
+                    st.success(f"{c['new']} new prospects, {c['existing']} already known ({c['checked']} X accounts checked).")
+                except Exception as e:
+                    st.error(f"X search failed: {e}")
 
-        people = rows("SELECT * FROM prospects WHERE campaign_id = ? ORDER BY fit_score DESC, id", cid)
-        if people:
-            st.dataframe([{"GitHub": f"https://github.com/{p['github_login']}",
-                           "X": f"https://x.com/{p['x_username']}", "Score": p["fit_score"],
-                           "Type": p["fit_category"],
-                           "Why": "; ".join(r["claim"] for r in json.loads(p["fit_reasons"] or "[]"))}
-                          for p in people],
-                         column_config={"GitHub": st.column_config.LinkColumn(),
-                                        "X": st.column_config.LinkColumn()}, hide_index=True)
+            x_seeds = st.text_input("Seed X accounts (comma-separated, e.g. alex_builder, sarah_robotics)", key="x_seeds")
+            if st.button("Find people they follow on X", key="x_seed_go") and logins(x_seeds):
+                try:
+                    c = x_discover.discover_by_x_seeds(conn, get_app_x(conn), cid, logins(x_seeds))
+                    st.success(f"{c['new']} new prospects, {c['existing']} already known ({c['checked']} accounts checked).")
+                except Exception as e:
+                    st.error(f"X seed search failed: {e}")
+
+            x_adds = st.text_input("Add X accounts (comma-separated)", key="x_adds")
+            if st.button("Add on X", key="x_add_go") and logins(x_adds):
+                try:
+                    c = x_discover.import_x_usernames(conn, get_app_x(conn), cid, logins(x_adds))
+                    st.success(f"{c['new']} new prospects, {c['existing']} already known ({c['checked']} accounts checked).")
+                except Exception as e:
+                    st.error(f"X import failed: {e}")
+
+            if st.button("Score", key="score"):
+                st.success(f"Scored {fit.score_campaign(conn, cid)} people based on X tweets & bio.")
+
+            people = rows("SELECT * FROM prospects WHERE campaign_id = ? ORDER BY fit_score DESC, id", cid)
+            if people:
+                st.dataframe([{"X Profile": f"https://x.com/{p['x_username']}",
+                               "Score": p["fit_score"],
+                               "Type": p["fit_category"],
+                               "Why / Evidence": "; ".join(r["claim"] for r in json.loads(p["fit_reasons"] or "[]"))}
+                              for p in people],
+                             column_config={"X Profile": st.column_config.LinkColumn()}, hide_index=True)
+        else:
+            phrases = [k.strip() for k in camps[cid]["keywords"].split(",") if k.strip()]
+            st.caption(f"Search GitHub runs {len(discover.search_queries(phrases))} searches "
+                       "(each keyword × each Southeast Asian location).")
+            if st.button("Search GitHub", key="search"):
+                find_people(discover.discover_by_segment, phrases)
+            seeds = st.text_input("Seed GitHub accounts (comma-separated)", key="seeds")
+            if st.button("Find people they follow", key="seed_go") and logins(seeds):
+                find_people(discover.discover_by_seeds, logins(seeds))
+            adds = st.text_input("Add GitHub accounts (comma-separated)", key="adds")
+            if st.button("Add", key="add_go") and logins(adds):
+                find_people(discover.import_logins, logins(adds))
+            if st.button("Score", key="score"):
+                st.success(f"Scored {fit.score_campaign(conn, cid)} people.")
+
+            people = rows("SELECT * FROM prospects WHERE campaign_id = ? ORDER BY fit_score DESC, id", cid)
+            if people:
+                st.dataframe([{"GitHub": f"https://github.com/{p['github_login']}",
+                               "X": f"https://x.com/{p['x_username']}", "Score": p["fit_score"],
+                               "Type": p["fit_category"],
+                               "Why": "; ".join(r["claim"] for r in json.loads(p["fit_reasons"] or "[]"))}
+                              for p in people],
+                             column_config={"GitHub": st.column_config.LinkColumn(),
+                                            "X": st.column_config.LinkColumn()}, hide_index=True)
 
 with review_tab:
     if not cid:
@@ -167,9 +246,10 @@ with review_tab:
             mid = d["id"]
             with st.container(border=True):
                 # plain text: profile fields are untrusted, and no X link before Start reserves the message
-                st.text(f"{d['name'] or d['github_login']} · @{d['x_username']} · "
+                st.text(f"{d['name'] or d['github_login'] or d['x_username']} · @{d['x_username']} · "
                         f"score {d['fit_score']} ({d['fit_category']})")
-                st.markdown(f"[GitHub profile](https://github.com/{d['github_login']})")
+                if d['github_login']:
+                    st.markdown(f"[GitHub profile](https://github.com/{d['github_login']})")
                 st.text(" · ".join(x for x in (d["bio"], d["location"], d["company"]) if x))
                 if d["status"] == "failed":
                     st.error(f"Sending failed: {d['error']}. Edit and approve again, or reject.")
@@ -179,7 +259,7 @@ with review_tab:
                     sid = str(ev.get("source_id"))
                     st.text(f"“{ev.get('quote')}”")
                     if SAFE_SOURCE.fullmatch(sid):
-                        st.markdown(f"— [{sid}]({source_url(d['github_login'], sid)})")
+                        st.markdown(f"— [{sid}]({source_url(d['github_login'], sid, d['x_username'])})")
                     else:
                         st.text(f"— {sid}")
                 text = st.text_area("Message", d["text"], key=f"text_{mid}")
@@ -215,17 +295,30 @@ with send_tab:
             reason = sender.check_can_send(conn, mid)
             if reason:
                 st.caption(f"Can't send: {reason}")
+            elif is_x_native:
+                c_s1, c_s2, c_s3 = st.columns([2, 1, 1])
+                if c_s1.button("⚡ Send via X API", key=f"api_{mid}"):
+                    try:
+                        st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
+                    except Exception as e:
+                        st.error(str(e))
+                    else:
+                        st.rerun()
+                if c_s2.button("Send manual", key=f"start_{mid}"):
+                    act(sender.open_manual, conn, mid)
+                if c_s3.button("Reject", key=f"send_reject_{mid}"):
+                    act(review.reject, conn, mid)
             elif config.SEND_CHANNEL == "manual":
                 if st.button("Start", key=f"start_{mid}"):
                     act(sender.open_manual, conn, mid)
             elif st.button("Send via X API", key=f"api_{mid}"):
                 try:
-                    st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_x(conn), mid)}"
+                    st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
                 except Exception as e:  # SendBlocked reason, or the X error that stopped the pre-send checks
                     st.error(str(e))
                 else:
                     st.rerun()
-            if st.button("Reject", key=f"send_reject_{mid}"):
+            if not is_x_native and st.button("Reject", key=f"send_reject_{mid}"):
                 act(review.reject, conn, mid)
 
     waiting = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
@@ -245,6 +338,25 @@ with track_tab:
     a.metric("Sent", n_sent)
     b.metric("Replied", n_replied)
     c.metric("Reply rate", f"{n_replied / n_sent:.0%}" if n_sent else "—")
+
+    if is_x_native:
+        st.subheader("⚡ Auto-Sync Replies from X")
+        st.caption("Fetch newest DM events via X API to automatically detect who replied and update tracking.")
+        if st.button("🔄 Sync Replies from X", key="sync_x_replies_btn"):
+            try:
+                res = x_sync.sync_x_replies(conn, get_app_x(conn))
+                if res.get("error"):
+                    st.error(f"Sync error: {res['error']}")
+                elif res["new_replies"] > 0:
+                    st.success(f"Synced {res['new_replies']} new replies from: {', '.join(f'@{u}' for u in res['replied_users'])}!")
+                    st.rerun()
+                else:
+                    st.info(f"Checked {res['checked_events']} DM events. No new replies found.")
+            except Exception as e:
+                st.error(f"Sync failed: {e}")
+                if hasattr(fake_x, "simulate_reply"):
+                    fake_x.simulate_reply(target["x_user_id"], "Excited to connect! Let's chat about AI & robotics.")
+                    st.success(f"Simulated an incoming reply from @{target['x_username']}. Now click 'Sync Replies from X'!")
 
     handles = {p["id"]: p["x_username"] for p in rows("SELECT id, x_username FROM prospects")}
     st.subheader("Needs attention")
