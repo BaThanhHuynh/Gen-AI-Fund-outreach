@@ -10,10 +10,10 @@ Làm cho **bài tập về nhà vị trí Forward Deployed Engineer (FDE) của 
 ## Điểm chính
 
 - **Hai chế độ làm việc:** chọn ở thanh bên trái (sidebar) của app Streamlit:
-  1. **🛡️ Chế độ GitHub (0 USD, an toàn — nên dùng):** tìm người thật qua GitHub API (kho mã, lần commit, nơi ở
+  1. **Chế độ GitHub (0 USD, an toàn — nên dùng):** tìm người thật qua GitHub API (kho mã, lần commit, nơi ở
      tại Đông Nam Á). Bản nháp trích mô tả kho mã hoặc mã thật của họ. Bạn tự tay bấm Gửi trên X, nên tốn 0 USD và
      không có tin nhắn riêng (DM) nào gửi tự động.
-  2. **⚡ Chế độ X gốc (đúng đề bài):** tìm người ngay trên X (theo từ khoá trong bài đăng và theo mạng lưới của các
+  2. **Chế độ X gốc (đúng đề bài):** tìm người ngay trên X (theo từ khoá trong bài đăng và theo mạng lưới của các
      tài khoản X gốc), trích nguyên văn bài đăng gần đây của họ. App gửi DM qua X API đã kết nối, nhưng chỉ tới các
      tài khoản có trong `SEND_ALLOWLIST` (người khác thì bạn tự tay gửi), rồi đọc hộp thư DM để biết ai đã trả lời.
      Cần một X developer App trả phí (xem [Chi phí](#chi-phí-và-tính-năng-trả-phí)). **Mới chỉ thử bằng dữ liệu mẫu
@@ -27,7 +27,7 @@ Làm cho **bài tập về nhà vị trí Forward Deployed Engineer (FDE) của 
   và công tắc «Không liên hệ» có tác dụng ngay.
 - **Mặc định 0 USD (chế độ GitHub):** lưu dữ liệu bằng SQLite trên máy, dùng token GitHub miễn phí, soạn nháp bằng mẫu
   có sẵn (hoặc mô hình Ollama chạy trên máy). Có thể bật API trả phí (Claude, X API v2) nếu bạn cấu hình.
-- **Kiểm thử kỹ:** 149 test tự động, tất cả chạy được khi không có mạng (mọi lệnh gọi mạng đều bị chặn).
+- **Kiểm thử kỹ:** 150 test tự động, tất cả chạy được khi không có mạng (mọi lệnh gọi mạng đều bị chặn).
 
 ---
 
@@ -99,7 +99,7 @@ Mở **`http://localhost:8501`** trong trình duyệt.
 
 Chọn chế độ ở mục **CHẾ ĐỘ LÀM VIỆC** trên cùng của thanh bên trái.
 
-### Chế độ 1: 🛡️ GitHub (0 USD, an toàn)
+### Chế độ 1: GitHub (0 USD, an toàn)
 1. **Tìm người** (tab *Tìm người*):
    - Tạo hoặc chọn một chiến dịch (ví dụ từ khoá: `robotics, machine learning`).
    - Bấm **Tìm trên GitHub** (tìm từng từ khoá ở từng địa điểm Đông Nam Á), **Tìm người họ theo dõi** (đi từ vài
@@ -120,7 +120,7 @@ Chọn chế độ ở mục **CHẾ ĐỘ LÀM VIỆC** trên cùng của thanh
    - Có người trả lời: chọn người đó ở **Đánh dấu đã trả lời**, ghi chú họ nói gì; tin sẽ vào mục **Cần xử lý**.
    - Xong việc thì bấm **Đã xử lý xong**, hoặc bật **Không liên hệ người này**.
 
-### Chế độ 2: ⚡ X gốc (đúng đề bài)
+### Chế độ 2: X gốc (đúng đề bài)
 Trước khi bắt đầu (chạy thật): tạo một X developer App có quyền đọc/ghi DM và có credit API, đăng ký
 `http://127.0.0.1:8765/callback` làm callback URL (địa chỉ X gọi lại sau khi đăng nhập), điền `X_CLIENT_ID` /
 `X_CLIENT_SECRET` vào `.env`, rồi bấm **Kết nối tài khoản X** ở thanh bên trái. Mỗi lệnh gọi X dưới đây đều tốn
@@ -135,10 +135,10 @@ credit: xem [Chi phí](#chi-phí-và-tính-năng-trả-phí).
    - Bản nháp trích nguyên văn bài đăng hoặc tiểu sử X, kèm đường dẫn tới bằng chứng đã kiểm.
    - Sửa nếu cần rồi bấm **Duyệt**.
 3. **Gửi tin:**
-   - **⚡ Gửi qua X API** gửi từ tài khoản bạn đã kết nối, nhưng chỉ tới tài khoản có trong `SEND_ALLOWLIST` (X cấm
+   - **Gửi qua X API** gửi từ tài khoản bạn đã kết nối, nhưng chỉ tới tài khoản có trong `SEND_ALLOWLIST` (X cấm
      gửi DM tự động cho người không yêu cầu). Với người khác, dùng **Tự tay gửi**, giống chế độ 1.
 4. **Theo dõi và lấy trả lời:**
-   - Bấm **🔄 Lấy trả lời từ X**: app đọc 100 tin DM mới nhất; nếu người nhận đã nhắn lại cho bạn thì tin đã gửi được
+   - Bấm **Lấy trả lời từ X**: app đọc 100 tin DM mới nhất; nếu người nhận đã nhắn lại cho bạn thì tin đã gửi được
      đánh dấu «đã trả lời» và chuyển vào **Cần xử lý**. Vẫn có thể bấm **Đánh dấu đã trả lời** bằng tay.
 
 ## Chạy thử không cần khoá nào (dữ liệu mẫu)
@@ -148,7 +148,7 @@ credit: xem [Chi phí](#chi-phí-và-tính-năng-trả-phí).
    theo mẫu, không dùng mạng, không cần khoá. Cả hai chế độ đều chạy được.
 3. **Tìm người** → tạo chiến dịch với từ khoá `robotics, robot learning` → `Tìm trên GitHub` (hoặc `Tìm trên X`) →
    `Chấm điểm` · **Duyệt tin** → `Soạn N bản nháp tiếp theo` → `Duyệt` · **Gửi tin** → `Bắt đầu gửi` → `Tôi đã gửi`
-   (hoặc `⚡ Gửi qua X API`) · **Theo dõi** → `Đánh dấu đã trả lời` → `Đã xử lý xong`.
+   (hoặc `Gửi qua X API`) · **Theo dõi** → `Đánh dấu đã trả lời` → `Đã xử lý xong`.
 
 Dữ liệu mẫu nằm ở `data/fake.db`; xoá tệp này để làm lại từ đầu. Đặt lại `X_MODE=real` để dùng dữ liệu thật
 (`data/outreach.db`).
@@ -217,7 +217,7 @@ Giới hạn đã biết:
 
 ## Chạy test
 
-Chạy toàn bộ 149 test (không cần mạng) để kiểm tra hệ thống:
+Chạy toàn bộ 150 test (không cần mạng) để kiểm tra hệ thống:
 ```bash
 pytest -q
 ```
