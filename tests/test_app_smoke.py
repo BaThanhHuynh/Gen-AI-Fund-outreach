@@ -232,3 +232,13 @@ def test_x_sync_failure_shows_error_not_traceback(tmp_path, monkeypatch):
     at.button(key="sync_x_replies_btn").click().run()
     assert not at.exception
     assert any("X is down" in e.value for e in at.error)
+
+
+def test_x_native_shows_connect_button_on_manual_channel(tmp_path, monkeypatch):
+    """X search needs an X login, so X Native mode offers it even when sends go by hand."""
+    monkeypatch.setattr(config, "X_MODE", "real")
+    monkeypatch.setattr(config, "SEND_CHANNEL", "manual")
+    at = _app(tmp_path, monkeypatch).run()
+    x_opt = [o for o in at.radio(key="app_workflow_mode").options if "X gốc" in o][0]
+    at.radio(key="app_workflow_mode").set_value(x_opt).run()
+    assert "connect_x_btn" in [b.key for b in at.sidebar.button]

@@ -1,7 +1,7 @@
 # Trạng thái dự án — bài tập GenAI Fund
 
-Cập nhật: 2026-11-16 (người dùng thêm chế độ kép GitHub / X Native; Claude rà và sửa 3 lỗi mã + tài liệu; 149 test;
-chưa commit).
+Cập nhật: 2026-11-16 (rà soát tổng: sửa nút «Kết nối tài khoản X» ở chế độ X gốc + kênh thủ công, tài liệu khớp;
+151 test; chưa commit).
 
 - Đề bài: `docs/assignment.md` · Quy trình: `docs/quy_trinh_trien_khai.md` · Báo cáo: `docs/bao_cao/gd-N.md`
 - Vai trò: **từ GĐ3 Claude tự làm hết GĐ3 → GĐ7** (người dùng quyết ngày 13/11/2026). Việc chỉ người làm được
@@ -43,6 +43,11 @@ chưa commit).
   `docs/demo_script.md` đổi tên nút cho khớp. Đã commit `1d04121`.
 - 16/11/2026: «Kết nối tài khoản X» lỗi trên trang X vì `.env` để trống `X_CLIENT_ID`/`X_CLIENT_SECRET`. `auth.login`
   giờ báo lỗi trước khi mở X; README thêm 2 dòng gỡ lỗi; 150 test. Còn nợ: người dùng điền khoá.
+- 16/11/2026 (rà soát tổng): chế độ X gốc + kênh thủ công giấu nút «Kết nối tài khoản X» → đã sửa, có test; 151 test.
+  writeup/README/demo_script cập nhật số test và nhãn. Còn mở: README/giao diện tiếng Việt (người đánh giá có thể
+  không đọc được); X gốc chưa chạy với X API thật; repo GitHub công khai, lịch sử `21d2362` còn tên X người thật.
+- 16/11/2026 (người dùng): README về lại tiếng Anh, nội dung theo bản tiếng Việt mới nhất; giao diện giữ tiếng Việt,
+  README ghi nhãn nút nguyên văn kèm bản dịch trong ngoặc. Mọi nhãn/chuỗi lỗi README nêu đã đối chiếu với `app.py`.
 
 ## Câu hỏi còn mở
 - `gd-6-ra-soat.md`: bảng hồ sơ ở tab Find vẫn có liên kết X (Claude tự quyết theo kế hoạch). Người dùng muốn bỏ thì

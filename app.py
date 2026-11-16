@@ -110,7 +110,7 @@ with st.sidebar:
     config.SEND_CHANNEL = selected_channel
     st.session_state.send_channel = selected_channel
 
-    if selected_channel == "api":
+    if selected_channel == "api" or is_x_native:  # X Native search needs an X login even when sends go by hand
         me = db.kv_get(conn, "me")
         if me:
             st.success(f"Đã kết nối X: @{me['username']}")

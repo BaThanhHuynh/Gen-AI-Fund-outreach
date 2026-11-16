@@ -58,6 +58,8 @@ Claude wrote the plan and reviewed stages 1–2. Antigravity wrote stages 1–2b
 and each stage was reviewed by a fresh Claude subagent that had not written it: it read the diff and tried failure
 cases, and from stage 4 it also reran the tests with the network blocked. These reviews sent stage 2 back (its live
 check had not been run), caught a test that called the real network, and found 3 must-fix UI bugs, such as a second browser tab silently
-clearing a do-not-contact flag. Every code fix came with a test that failed first. 149 tests, none touching the network.
+clearing a do-not-contact flag. X Native mode was added last; a Claude review of it found a reply-sync crash, an X 400
+on reading fewer than 5 posts, keywords joined with AND in the X search, and a hidden X connect button.
+Every code fix came with a test that failed first. 151 tests, none touching the network.
 In the product, the evidence check and human approval keep model output from going out unchecked. The live run sent
 one real DM, to my own test account, which replied.
