@@ -9,15 +9,18 @@ Làm cho **bài tập về nhà vị trí Forward Deployed Engineer (FDE) của 
 
 ## Điểm chính
 
-- **Hai chế độ làm việc:** chọn ở thanh bên trái (sidebar) của app Streamlit:
-  1. **Chế độ GitHub (0 USD, an toàn — nên dùng):** tìm người thật qua GitHub API (kho mã, lần commit, nơi ở
+- **Hai chế độ làm việc:** chọn ở mục **CHẾ ĐỘ LÀM VIỆC** trên thanh bên trái (sidebar) của app Streamlit:
+  1. **Chế độ GitHub (miễn phí — nên dùng):** tìm người thật qua GitHub API (kho mã, lần commit, nơi ở
      tại Đông Nam Á). Bản nháp trích mô tả kho mã hoặc mã thật của họ. Bạn tự tay bấm Gửi trên X, nên tốn 0 USD và
      không có tin nhắn riêng (DM) nào gửi tự động.
-  2. **Chế độ X gốc (đúng đề bài):** tìm người ngay trên X (theo từ khoá trong bài đăng và theo mạng lưới của các
-     tài khoản X gốc), trích nguyên văn bài đăng gần đây của họ. App gửi DM qua X API đã kết nối, nhưng chỉ tới các
-     tài khoản có trong `SEND_ALLOWLIST` (người khác thì bạn tự tay gửi), rồi đọc hộp thư DM để biết ai đã trả lời.
-     Cần một X developer App trả phí (xem [Chi phí](#chi-phí-và-tính-năng-trả-phí)). **Mới chỉ thử bằng dữ liệu mẫu
-     và X giả lập (mock), chưa chạy với X API thật.**
+  2. **Chế độ X gốc (có phí — đúng đề bài):** tìm người ngay trên X (theo từ khoá trong bài đăng và theo mạng lưới của các
+     tài khoản X gốc), trích nguyên văn bài đăng gần đây của họ. App gửi DM qua X API v2 đã kết nối OAuth 2.0 (chỉ gửi tới
+     các tài khoản có trong `SEND_ALLOWLIST`), rồi đọc hộp thư DM để biết ai đã trả lời. Cần tài khoản X Developer có
+     credit API trả trước (xem [Chi phí](#chi-phí-và-tính-năng-trả-phí)).
+- **Chuyển đổi kênh gửi linh hoạt (Thủ công vs X API):** Bạn có thể đổi kênh gửi bất kỳ lúc nào qua mục **KÊNH GỬI (SEND CHANNEL)**
+  ở thanh bên trái hoặc bằng nút bấm chuyển nhanh 1-click ở đầu tab Gửi tin:
+  - *Thủ công (Manual - $0):* Tự sao chép tin nhắn và mở trang X của người nhận để bấm gửi ($0, an toàn tuyệt đối, không lo tốn phí API).
+  - *Tự động (X API v2):* Gửi trực tiếp qua X API v2 cho các tài khoản trong danh sách cho phép (cần tài khoản X Developer đã nạp credit).
 - **Cá nhân hoá có bằng chứng:** mỗi bản nháp trích một thông tin kiểm được từ tiểu sử (bio), kho mã hoặc bài đăng
   gần đây của người đó. Câu trích phải khớp từng chữ với nguồn; không khớp thì không duyệt được.
 - **Không bao giờ nhắn một người hai lần:** cơ sở dữ liệu SQLite bảo đảm điều này bằng ràng buộc `UNIQUE(prospect_id)`
@@ -27,6 +30,8 @@ Làm cho **bài tập về nhà vị trí Forward Deployed Engineer (FDE) của 
   và công tắc «Không liên hệ» có tác dụng ngay.
 - **Mặc định 0 USD (chế độ GitHub):** lưu dữ liệu bằng SQLite trên máy, dùng token GitHub miễn phí, soạn nháp bằng mẫu
   có sẵn (hoặc mô hình Ollama chạy trên máy). Có thể bật API trả phí (Claude, X API v2) nếu bạn cấu hình.
+- **Khởi đầu hoàn toàn mới:** Người dùng mới clone mã nguồn về sẽ bắt đầu từ con số 0 (0 chiến dịch, 0 ứng viên, 0 tin nhắn).
+  Cơ sở dữ liệu tự động được tạo mới hoàn toàn trên máy cục bộ.
 - **Kiểm thử kỹ:** 150 test tự động, tất cả chạy được khi không có mạng (mọi lệnh gọi mạng đều bị chặn).
 
 ---
@@ -111,17 +116,18 @@ Chọn chế độ ở mục **CHẾ ĐỘ LÀM VIỆC** trên cùng của thanh
    - Xem từng bản nháp cạnh nguồn bằng chứng và đường dẫn tới nguồn.
    - Sửa chữ nếu cần, rồi bấm **Duyệt** hoặc **Từ chối**. Câu trích không khớp nguồn thì không duyệt được.
 3. **Gửi tin** (tab *Gửi tin*):
-   - Tin đã duyệt hiện ra, sẵn sàng để gửi.
-   - Bấm **Bắt đầu gửi**: công cụ «giữ chỗ» tin này trong SQLite (để không ai gửi trùng), hiện nội dung tin kèm nút
-     sao chép, và nút mở trang X của người nhận.
-   - Dán và gửi tin trên X, rồi quay lại xác nhận: **Tôi đã gửi**, **Chưa gửi**, hoặc **Đã liên hệ từ trước**.
+   - Ngay đầu tab có thanh trạng thái hiển thị kênh hiện tại và nút bấm chuyển nhanh giữa **Thủ công ($0)** và **Tự động (X API)**.
+   - Tin đã duyệt hiện ra, kèm cả hai lựa chọn gửi với mức độ ưu tiên theo kênh bạn chọn:
+     - Với kênh **Thủ công**: Bấm **Bắt đầu gửi** để giữ chỗ tin trong SQLite, sao chép nội dung và mở trang X của người nhận. Sau khi gửi trên X, quay lại bấm **Tôi đã gửi**.
+     - Với kênh **Tự động (X API)**: Bấm **Gửi qua X API** để gửi trực tiếp qua X API v2 tới người trong `SEND_ALLOWLIST`.
+   - Nút **Từ chối** luôn sẵn sàng để bạn huỷ duyệt tin bất cứ lúc nào.
 4. **Theo dõi** (tab *Theo dõi*):
    - Số liệu cập nhật ngay: Đã gửi, Đã trả lời, Tỉ lệ trả lời.
    - Có người trả lời: chọn người đó ở **Đánh dấu đã trả lời**, ghi chú họ nói gì; tin sẽ vào mục **Cần xử lý**.
    - Xong việc thì bấm **Đã xử lý xong**, hoặc bật **Không liên hệ người này**.
 
-### Chế độ 2: X gốc (đúng đề bài)
-Trước khi bắt đầu (chạy thật): tạo một X developer App có quyền đọc/ghi DM và có credit API, đăng ký
+### Chế độ 2: X gốc (có phí — đúng đề bài)
+Trước khi bắt đầu (chạy thật): tạo một X Developer App có quyền đọc/ghi DM và có credit API, đăng ký
 `http://127.0.0.1:8765/callback` làm callback URL (địa chỉ X gọi lại sau khi đăng nhập), điền `X_CLIENT_ID` /
 `X_CLIENT_SECRET` vào `.env`, rồi bấm **Kết nối tài khoản X** ở thanh bên trái. Mỗi lệnh gọi X dưới đây đều tốn
 credit: xem [Chi phí](#chi-phí-và-tính-năng-trả-phí).
@@ -138,7 +144,7 @@ credit: xem [Chi phí](#chi-phí-và-tính-năng-trả-phí).
    - **Gửi qua X API** gửi từ tài khoản bạn đã kết nối, nhưng chỉ tới tài khoản có trong `SEND_ALLOWLIST` (X cấm
      gửi DM tự động cho người không yêu cầu). Với người khác, dùng **Tự tay gửi**, giống chế độ 1.
 4. **Theo dõi và lấy trả lời:**
-   - Bấm **Lấy trả lời từ X**: app đọc 100 tin DM mới nhất; nếu người nhận đã nhắn lại cho bạn thì tin đã gửi được
+   - Bấm **Lấy trả lời từ X**: app đọc 100 tin DM mới nhất qua X API; nếu người nhận đã nhắn lại cho bạn thì tin đã gửi được
      đánh dấu «đã trả lời» và chuyển vào **Cần xử lý**. Vẫn có thể bấm **Đánh dấu đã trả lời** bằng tay.
 
 ## Chạy thử không cần khoá nào (dữ liệu mẫu)
@@ -263,6 +269,7 @@ Nhắn tin làm quen người lạ (cold outreach) chạm tới luật của n�
 
 | Dấu hiệu | Nguyên nhân | Cách xử lý |
 |:---|:---|:---|
+| `X API error 402: Payment Required ("credits depleted")` | Tài khoản X Developer chưa nạp credit hoặc hết hạn mức (~$0.015/DM) | Nạp prepaid credit tại [developer.x.com](https://developer.x.com), hoặc chuyển sang kênh **Thủ công ($0)** trên giao diện để copy gửi miễn phí qua trình duyệt. |
 | `doctor: Missing required configuration keys: GITHUB_TOKEN` | `.env` chưa có token | Thêm token GitHub hợp lệ vào `.env`. |
 | `doctor: GitHub rejected GITHUB_TOKEN` | Token sai hoặc hết hạn | Tạo token mới tại [github.com/settings/tokens](https://github.com/settings/tokens). |
 | `Không gửi được: not on SEND_ALLOWLIST (safety mode)` | Đang bật danh sách cho phép | Thêm tên X của người đó vào `SEND_ALLOWLIST` trong `.env`. |
@@ -274,7 +281,8 @@ Nhắn tin làm quen người lạ (cold outreach) chạm tới luật của n�
 
 ---
 
-## Quyền riêng tư và lưu trữ
+## Quyền riêng tư và khởi đầu sạch từ đầu
 
-Mọi dữ liệu chỉ nằm trên máy bạn, trong SQLite (`data/outreach.db`). Khoá và token chỉ nằm trong `.env`, không bao giờ
-được commit lên git. Streamlit đã tắt gửi số liệu sử dụng (telemetry) trong `.streamlit/config.toml`.
+- **Bắt đầu mới hoàn toàn khi clone:** Thư mục `data/` và mọi tệp cơ sở dữ liệu `*.db` được khai báo trong `.gitignore`. Khi bất kỳ ai clone repository này về máy, họ sẽ bắt đầu từ con số 0 (0 chiến dịch, 0 ứng viên, 0 tin nhắn). Thư mục `data/` và tệp cơ sở dữ liệu `outreach.db` sẽ được tự động khởi tạo khi chạy app lần đầu.
+- **Bảo mật khoá truy cập:** Mọi khoá bí mật và token chỉ lưu trong `.env` trên máy bạn, không bao giờ được commit lên git. Kho git chỉ lưu tệp mẫu an toàn `.env.example`.
+- **Quyền riêng tư Streamlit:** Đã tắt hoàn toàn tính năng gửi số liệu sử dụng (telemetry) trong `.streamlit/config.toml`.
