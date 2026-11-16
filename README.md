@@ -1,63 +1,76 @@
 # GenAI Fund Outreach
 
-A compliant, local-first tool for discovering AI and robotics builders in Southeast Asia, drafting warm personalized messages with verbatim evidence, and running safe outreach on X.
+Công cụ chạy trên máy của bạn, giúp: tìm những người đang làm AI và robot ở Đông Nam Á, soạn tin nhắn làm quen
+riêng cho từng người (có trích nguyên văn bằng chứng), và nhắn tin trên X một cách an toàn, đúng luật của nền tảng.
 
-Built for the **GenAI Fund Forward Deployed Engineer (FDE) Take-Home Assignment**.
-
----
-
-## Highlights
-
-- **Dual-Mode Architecture:** Switch seamlessly on the Streamlit sidebar between:
-  1. **🛡️ GitHub Builder Mode ($0 Cost & Platform-Safe — Recommended):** Finds authentic builders through the GitHub API (repositories, commits, SEA locations), crafts drafts quoting real code/repo descriptions, and uses a human-in-the-loop manual send ($0 cost; a person presses Send in X, so no automated DMs).
-  2. **⚡ X Native Mode (Official Take-Home Spec):** Discovers people directly on X (tweet keywords and X seed account networks), quotes recent posts/tweets verbatim, sends DMs through the connected X API to accounts on `SEND_ALLOWLIST` (anyone else: manual send), and syncs replies from the X DM inbox. Needs a paid X developer App (see [Costs](#costs-and-paid-features)). **Tested with sample data and mocks only, not yet against the live X API.**
-- **Evidence-Based Personalization:** Every draft quotes verifiable facts from the candidate's bio, repository, or recent post. Quotes must match source text word for word, or message approval is strictly blocked.
-- **Never Double-Message Anyone:** Guaranteed by SQLite database constraints (`UNIQUE(prospect_id)`) and atomic status reservations (`UPDATE ... WHERE status='approved'`). Even parallel clicks or multiple browser tabs cannot trigger duplicate sends.
-- **Built-in Safety & Limits:** Daily send cap (default: 20/day), safety allowlist (`SEND_MODE=allowlist`), and immediate `Do not contact` toggles.
-- **Zero-Cost Default (GitHub mode):** $0 operating cost with local SQLite storage, free GitHub API token, and built-in template drafting (or local Ollama). Optional paid APIs (Claude, X API v2) supported when configured.
-- **Robust Test Coverage:** 149 automated tests passing offline with blocked network calls.
+Làm cho **bài tập về nhà vị trí Forward Deployed Engineer (FDE) của GenAI Fund**.
 
 ---
 
-## System Requirements
+## Điểm chính
 
-- **Python:** 3.11 or newer.
-- **GitHub Token (free):** Fine-grained personal access token with *Public repositories (read-only)* access.
-- **Operating System:** Windows, macOS, or Linux.
-- **Drafting Provider (choose one in `.env`):**
-  - `template` (default, **$0**): Fixed message filled with verbatim evidence quote. No LLM needed.
-  - `ollama` (**$0** local model): Runs locally via [Ollama](https://ollama.com) (`ollama pull qwen3:4b`).
-  - `anthropic` (paid cloud API): Uses Claude via Anthropic API.
+- **Hai chế độ làm việc:** chọn ở thanh bên trái (sidebar) của app Streamlit:
+  1. **🛡️ Chế độ GitHub (0 USD, an toàn — nên dùng):** tìm người thật qua GitHub API (kho mã, lần commit, nơi ở
+     tại Đông Nam Á). Bản nháp trích mô tả kho mã hoặc mã thật của họ. Bạn tự tay bấm Gửi trên X, nên tốn 0 USD và
+     không có tin nhắn riêng (DM) nào gửi tự động.
+  2. **⚡ Chế độ X gốc (đúng đề bài):** tìm người ngay trên X (theo từ khoá trong bài đăng và theo mạng lưới của các
+     tài khoản X gốc), trích nguyên văn bài đăng gần đây của họ. App gửi DM qua X API đã kết nối, nhưng chỉ tới các
+     tài khoản có trong `SEND_ALLOWLIST` (người khác thì bạn tự tay gửi), rồi đọc hộp thư DM để biết ai đã trả lời.
+     Cần một X developer App trả phí (xem [Chi phí](#chi-phí-và-tính-năng-trả-phí)). **Mới chỉ thử bằng dữ liệu mẫu
+     và X giả lập (mock), chưa chạy với X API thật.**
+- **Cá nhân hoá có bằng chứng:** mỗi bản nháp trích một thông tin kiểm được từ tiểu sử (bio), kho mã hoặc bài đăng
+  gần đây của người đó. Câu trích phải khớp từng chữ với nguồn; không khớp thì không duyệt được.
+- **Không bao giờ nhắn một người hai lần:** cơ sở dữ liệu SQLite bảo đảm điều này bằng ràng buộc `UNIQUE(prospect_id)`
+  (mỗi người chỉ có một tin) và bằng cách «giữ chỗ» tin nhắn trong một lệnh duy nhất
+  (`UPDATE ... WHERE status='approved'`). Bấm hai lần liền hay mở nhiều tab trình duyệt cũng không gửi trùng.
+- **Có sẵn giới hạn an toàn:** trần số tin mỗi ngày (mặc định 20/ngày), danh sách cho phép (`SEND_MODE=allowlist`),
+  và công tắc «Không liên hệ» có tác dụng ngay.
+- **Mặc định 0 USD (chế độ GitHub):** lưu dữ liệu bằng SQLite trên máy, dùng token GitHub miễn phí, soạn nháp bằng mẫu
+  có sẵn (hoặc mô hình Ollama chạy trên máy). Có thể bật API trả phí (Claude, X API v2) nếu bạn cấu hình.
+- **Kiểm thử kỹ:** 149 test tự động, tất cả chạy được khi không có mạng (mọi lệnh gọi mạng đều bị chặn).
 
 ---
 
-## Quickstart (Under 5 Minutes)
+## Cần có gì
 
-### 1. Clone the repository and enter the folder
+- **Python:** 3.11 trở lên.
+- **Token GitHub (miễn phí):** loại *Fine-grained personal access token*, quyền *Public repositories (read-only)* —
+  chỉ đọc kho công khai.
+- **Hệ điều hành:** Windows, macOS hoặc Linux.
+- **Cách soạn nháp (chọn một trong `.env`):**
+  - `template` (mặc định, **0 USD**): một mẫu tin cố định, điền câu trích nguyên văn vào. Không cần mô hình AI.
+  - `ollama` (**0 USD**, chạy trên máy): dùng [Ollama](https://ollama.com) (`ollama pull qwen3:4b`).
+  - `anthropic` (API trên mây, trả phí): dùng Claude qua Anthropic API.
+
+---
+
+## Bắt đầu nhanh (dưới 5 phút)
+
+### 1. Tải mã về và vào thư mục
 ```bash
 git clone <repository-url> genaifund-outreach
 cd genaifund-outreach
 ```
-*(On Windows, use a short folder path such as `C:\projects\genaifund-outreach` to prevent path length limits).*
+*(Trên Windows, nên để thư mục ở đường dẫn ngắn như `C:\projects\genaifund-outreach` để tránh lỗi đường dẫn quá dài.)*
 
-### 2. Create and activate a virtual environment
+### 2. Tạo và bật môi trường ảo (virtual environment)
 ```bash
 python -m venv .venv
 ```
 - **Windows (PowerShell):** `.\.venv\Scripts\Activate.ps1`
 - **macOS / Linux:** `source .venv/bin/activate`
 
-### 3. Install dependencies
+### 3. Cài thư viện
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure your environment
-Create your local `.env` file from the example:
+### 4. Cấu hình
+Tạo tệp `.env` từ tệp mẫu:
 - **Windows:** `copy .env.example .env`
 - **macOS / Linux:** `cp .env.example .env`
 
-Open `.env` and add your free GitHub token:
+Mở `.env` và điền token GitHub miễn phí của bạn:
 ```env
 X_MODE=real
 GITHUB_TOKEN=github_pat_...
@@ -67,189 +80,199 @@ SEND_ALLOWLIST=your_x_handle
 DAILY_SEND_CAP=20
 ```
 
-### 5. Run the diagnostic tool
-Verify your setup in 2 seconds:
+### 5. Chạy công cụ kiểm tra cấu hình
+Kiểm tra trong 2 giây:
 ```bash
 python -m outreach.doctor
 ```
-Every line should display `PASS`.
+Mọi dòng phải hiện `PASS`.
 
-### 6. Launch the Streamlit application
+### 6. Mở app Streamlit
 ```bash
 streamlit run app.py
 ```
-Open **`http://localhost:8501`** in your browser.
+Mở **`http://localhost:8501`** trong trình duyệt.
 
 ---
 
-## Workflow Walkthrough
+## Cách dùng từng bước
 
-Use the **Workflow Mode** selector at the top of the sidebar to switch modes:
+Chọn chế độ ở mục **CHẾ ĐỘ LÀM VIỆC** trên cùng của thanh bên trái.
 
-### Mode 1: 🛡️ GitHub Builder Mode ($0 & Safety)
-1. **Find:**
-   - Create or select a campaign (e.g., keywords: `robotics, machine learning`).
-   - Click **Search GitHub** (scans keywords across Southeast Asian locations), **Seed GitHub accounts** (finds builder networks), or **Add GitHub accounts**.
-   - Click **Score** to compute rule-based fit scores based on real evidence (bios, repositories, activity, stars).
-2. **Review:**
-   - Select batch size and click **Draft next N**.
-   - Review drafts side-by-side with exact evidence sources and URLs.
-   - Edit text if needed, then click **Approve** or **Reject**. Quotes not matching source text block approval.
-3. **Send:**
-   - Approved messages appear ready for delivery.
-   - Click **Start**: the tool reserves the message atomically in SQLite, copies the message text to your clipboard, and provides a direct link to open the candidate's X profile.
-   - Paste and send the message on X, then confirm: **I sent it**, **Not sent**, or **Already in contact**.
-4. **Track:**
-   - Live metrics: Sent count, Replied count, Reply rate.
-   - Inbound replies: Click **Mark replied** with a conversation note to queue under **Needs attention**.
-   - Resolve conversations with **Mark handled** or toggle **Do not contact**.
+### Chế độ 1: 🛡️ GitHub (0 USD, an toàn)
+1. **Tìm người** (tab *Tìm người*):
+   - Tạo hoặc chọn một chiến dịch (ví dụ từ khoá: `robotics, machine learning`).
+   - Bấm **Tìm trên GitHub** (tìm từng từ khoá ở từng địa điểm Đông Nam Á), **Tìm người họ theo dõi** (đi từ vài
+     tài khoản GitHub gốc sang mạng lưới của họ), hoặc **Thêm** (nhập sẵn tài khoản GitHub).
+   - Bấm **Chấm điểm** để tính điểm phù hợp theo luật cố định, dựa trên bằng chứng thật (tiểu sử, kho mã, mức hoạt
+     động, số sao).
+2. **Duyệt tin** (tab *Duyệt tin*):
+   - Chọn số bản nháp rồi bấm **Soạn N bản nháp tiếp theo**.
+   - Xem từng bản nháp cạnh nguồn bằng chứng và đường dẫn tới nguồn.
+   - Sửa chữ nếu cần, rồi bấm **Duyệt** hoặc **Từ chối**. Câu trích không khớp nguồn thì không duyệt được.
+3. **Gửi tin** (tab *Gửi tin*):
+   - Tin đã duyệt hiện ra, sẵn sàng để gửi.
+   - Bấm **Bắt đầu gửi**: công cụ «giữ chỗ» tin này trong SQLite (để không ai gửi trùng), hiện nội dung tin kèm nút
+     sao chép, và nút mở trang X của người nhận.
+   - Dán và gửi tin trên X, rồi quay lại xác nhận: **Tôi đã gửi**, **Chưa gửi**, hoặc **Đã liên hệ từ trước**.
+4. **Theo dõi** (tab *Theo dõi*):
+   - Số liệu cập nhật ngay: Đã gửi, Đã trả lời, Tỉ lệ trả lời.
+   - Có người trả lời: chọn người đó ở **Đánh dấu đã trả lời**, ghi chú họ nói gì; tin sẽ vào mục **Cần xử lý**.
+   - Xong việc thì bấm **Đã xử lý xong**, hoặc bật **Không liên hệ người này**.
 
-### Mode 2: ⚡ X Native Mode (Official Take-Home Spec)
-Before you start (real mode): create an X developer App with DM read/write permission and API credits, register
-`http://127.0.0.1:8765/callback` as its callback URL, put `X_CLIENT_ID` / `X_CLIENT_SECRET` in `.env`, then click
-**Connect X account** in the sidebar. Every X call below costs credits: see [Costs](#costs-and-paid-features).
+### Chế độ 2: ⚡ X gốc (đúng đề bài)
+Trước khi bắt đầu (chạy thật): tạo một X developer App có quyền đọc/ghi DM và có credit API, đăng ký
+`http://127.0.0.1:8765/callback` làm callback URL (địa chỉ X gọi lại sau khi đăng nhập), điền `X_CLIENT_ID` /
+`X_CLIENT_SECRET` vào `.env`, rồi bấm **Kết nối tài khoản X** ở thanh bên trái. Mỗi lệnh gọi X dưới đây đều tốn
+credit: xem [Chi phí](#chi-phí-và-tính-năng-trả-phí).
 
-1. **Find on X:**
-   - The search box is prefilled from the campaign keywords as an X query, e.g.
-     `("robotics" OR "embodied AI") -is:retweet`. Click **Search on X** (posts from the last 7 days and their authors).
-   - Enter X seed handles and click **Find people they follow on X**.
-   - Click **Score** to rank prospects based on their X bio and AI/robotics tweets.
-2. **Review:**
-   - Drafts quote the candidate's tweets or X bio verbatim with verified evidence links.
-   - Edit and click **Approve**.
-3. **Send:**
-   - **⚡ Send via X API** sends from your connected account, only to accounts on `SEND_ALLOWLIST` (X forbids
-     automated DMs to people who did not ask for them). For anyone else use **Send manual**, as in Mode 1.
-4. **Track & Sync:**
-   - Click **🔄 Sync Replies from X**: reads the newest 100 DM events, marks a sent message as replied when its
-     recipient wrote to you, and routes it to **Needs attention**. `Mark replied` still works by hand.
+1. **Tìm người trên X:**
+   - Ô tìm kiếm được điền sẵn từ từ khoá của chiến dịch, viết theo cú pháp của X, ví dụ
+     `("robotics" OR "embodied AI") -is:retweet`. Bấm **Tìm trên X** (bài đăng trong 7 ngày qua và tác giả của chúng).
+   - Nhập các tài khoản X gốc rồi bấm **Tìm người họ theo dõi trên X**.
+   - Bấm **Chấm điểm** để xếp hạng theo tiểu sử X và các bài đăng về AI/robot.
+2. **Duyệt tin:**
+   - Bản nháp trích nguyên văn bài đăng hoặc tiểu sử X, kèm đường dẫn tới bằng chứng đã kiểm.
+   - Sửa nếu cần rồi bấm **Duyệt**.
+3. **Gửi tin:**
+   - **⚡ Gửi qua X API** gửi từ tài khoản bạn đã kết nối, nhưng chỉ tới tài khoản có trong `SEND_ALLOWLIST` (X cấm
+     gửi DM tự động cho người không yêu cầu). Với người khác, dùng **Tự tay gửi**, giống chế độ 1.
+4. **Theo dõi và lấy trả lời:**
+   - Bấm **🔄 Lấy trả lời từ X**: app đọc 100 tin DM mới nhất; nếu người nhận đã nhắn lại cho bạn thì tin đã gửi được
+     đánh dấu «đã trả lời» và chuyển vào **Cần xử lý**. Vẫn có thể bấm **Đánh dấu đã trả lời** bằng tay.
 
-## Try it without any keys (sample data)
+## Chạy thử không cần khoá nào (dữ liệu mẫu)
 
-1. In `.env` set `X_MODE=fake` and `SEND_ALLOWLIST=alex_builder,sarah_robotics` (two of the sample people).
-2. `streamlit run app.py`. The sidebar says `TEST MODE (OFFLINE)`: sample GitHub and X profiles, template drafts,
-   no network, no keys. Both modes work.
-3. **Find** → create a campaign with keywords `robotics, robot learning` → `Search GitHub` (or `Search on X`) →
-   `Score` · **Review** → `Draft next N` → `Approve` · **Send** → `Start` → `I sent it` (or `⚡ Send via X API`) ·
-   **Track** → `Mark replied` → `Mark handled`.
+1. Trong `.env`, đặt `X_MODE=fake` và `SEND_ALLOWLIST=alex_builder,sarah_robotics` (hai người trong dữ liệu mẫu).
+2. Chạy `streamlit run app.py`. Thanh bên trái hiện `CHẾ ĐỘ THỬ (KHÔNG CẦN MẠNG)`: hồ sơ GitHub và X mẫu, bản nháp
+   theo mẫu, không dùng mạng, không cần khoá. Cả hai chế độ đều chạy được.
+3. **Tìm người** → tạo chiến dịch với từ khoá `robotics, robot learning` → `Tìm trên GitHub` (hoặc `Tìm trên X`) →
+   `Chấm điểm` · **Duyệt tin** → `Soạn N bản nháp tiếp theo` → `Duyệt` · **Gửi tin** → `Bắt đầu gửi` → `Tôi đã gửi`
+   (hoặc `⚡ Gửi qua X API`) · **Theo dõi** → `Đánh dấu đã trả lời` → `Đã xử lý xong`.
 
-Sample data lives in `data/fake.db`; delete that file to start over. Set `X_MODE=real` again for live data
+Dữ liệu mẫu nằm ở `data/fake.db`; xoá tệp này để làm lại từ đầu. Đặt lại `X_MODE=real` để dùng dữ liệu thật
 (`data/outreach.db`).
 
-## Contacting real people (`SEND_MODE=live`)
+## Nhắn cho người thật (`SEND_MODE=live`)
 
-`SEND_MODE=allowlist` (the default) blocks everyone who is not in `SEND_ALLOWLIST`. Keep it while you test.
+`SEND_MODE=allowlist` (mặc định) chặn mọi người không có trong `SEND_ALLOWLIST`. Hãy giữ nguyên khi còn thử.
 
-`SEND_MODE=live` lets you send to **any approved person, on the manual channel only**: you still read and approve
-every draft and press Send in X yourself, within `DAILY_SEND_CAP` (default 20 per 24 hours).
+`SEND_MODE=live` cho phép gửi tới **bất kỳ người nào đã được duyệt, nhưng chỉ qua kênh tự tay gửi**: bạn vẫn đọc và
+duyệt từng bản nháp, tự bấm Gửi trên X, và không vượt `DAILY_SEND_CAP` (mặc định 20 tin trong 24 giờ).
 
-The X API channel (both modes) always stays limited to `SEND_ALLOWLIST`, even in live mode. X's automation rules
-forbid automated DMs to people who have not asked to be contacted, even when a person approved each message.
+Kênh X API (ở cả hai chế độ) luôn chỉ gửi cho `SEND_ALLOWLIST`, kể cả khi bật live. Luật tự động hoá của X cấm gửi DM
+tự động cho người chưa đồng ý được liên hệ, dù từng tin đã được người duyệt.
 
-## Costs and paid features
+## Chi phí và tính năng trả phí
 
-GitHub mode with the manual channel and template drafts costs **$0**. Everything below is optional and paid.
-X prices are the per-resource estimates in `outreach/config.py` (`PRICES`: post read $0.005, user read $0.010,
-DM event read $0.010, DM sent $0.015); check X's current pricing before you rely on them.
+Chế độ GitHub + tự tay gửi + soạn nháp theo mẫu tốn **0 USD**. Mọi thứ dưới đây là tuỳ chọn và có trả phí.
+Giá X là giá ước tính theo từng loại dữ liệu, ghi trong `outreach/config.py` (`PRICES`: đọc một bài đăng $0.005, đọc
+một người dùng $0.010, đọc một tin DM $0.010, gửi một DM $0.015); hãy xem bảng giá hiện tại của X trước khi dựa vào.
 
-| Feature | Setting | Estimated cost | Status |
+| Tính năng | Cần bật | Chi phí ước tính | Tình trạng |
 |---|---|---|---|
-| X Native: Search on X | X App + Connect X account | up to 10 posts + 10 authors ≈ $0.15 per click | Sample data and mocks only |
-| X Native: Find people they follow | same | seed lookup $0.010 + up to 40 accounts × ($0.010 + 5 posts × $0.005) ≈ up to $1.41 per seed | Sample data and mocks only |
-| X Native: Add on X | same | $0.010 + 5 posts × $0.005 = $0.035 per account | Sample data and mocks only |
-| Send through the X API (both modes) | Mode 2, or `SEND_CHANNEL=api` in Mode 1 | $0.025 per message (conversation check $0.010 + send $0.015), +$0.010 when the X user id is not known yet | Mocks only. Allowlisted recipients only |
-| X Native: Sync Replies | same | up to 100 DM events × $0.010 = up to $1.00 per click | Sample data and mocks only |
-| Draft with Claude | `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `LLM_PRICE_IN` / `LLM_PRICE_OUT` (USD per million tokens) | Per token; the sidebar shows `Spend today` | Mocks only |
+| X gốc: Tìm trên X | X App + Kết nối tài khoản X | tối đa 10 bài đăng + 10 tác giả ≈ $0.15 mỗi lần bấm | Mới thử bằng dữ liệu mẫu và mock |
+| X gốc: Tìm người họ theo dõi | như trên | tra tài khoản gốc $0.010 + tối đa 40 tài khoản × ($0.010 + 5 bài × $0.005) ≈ tối đa $1.41 mỗi tài khoản gốc | Mới thử bằng dữ liệu mẫu và mock |
+| X gốc: Thêm từ X | như trên | $0.010 + 5 bài × $0.005 = $0.035 mỗi tài khoản | Mới thử bằng dữ liệu mẫu và mock |
+| Gửi qua X API (cả hai chế độ) | Chế độ 2, hoặc `SEND_CHANNEL=api` ở chế độ 1 | $0.025 mỗi tin (kiểm hội thoại cũ $0.010 + gửi $0.015), thêm $0.010 nếu chưa biết mã người dùng X | Mới thử bằng mock. Chỉ gửi cho người trong allowlist |
+| X gốc: Lấy trả lời từ X | như trên | tối đa 100 tin DM × $0.010 = tối đa $1.00 mỗi lần bấm | Mới thử bằng dữ liệu mẫu và mock |
+| Soạn nháp bằng Claude | `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `LLM_PRICE_IN` / `LLM_PRICE_OUT` (USD cho mỗi triệu token) | Tính theo token; thanh bên trái hiện `Chi phí hôm nay` | Mới thử bằng mock |
 
-Profiles of real people are sent only to a local model (Ollama) or to a paid API (Anthropic). Free cloud models are
-not supported on purpose: their terms let the provider read what you send.
+Hồ sơ của người thật chỉ được gửi tới mô hình chạy trên máy (Ollama) hoặc API trả phí (Anthropic). Cố ý không hỗ trợ
+mô hình miễn phí trên mây: điều khoản của họ cho phép nhà cung cấp đọc những gì bạn gửi.
 
-## Limits and blocked actions
+## Giới hạn và các thao tác bị chặn
 
-When the tool refuses something it shows the reason. What each reason means and how to clear it:
+Khi công cụ từ chối việc gì, nó hiện lý do (lý do giữ nguyên tiếng Anh như trong app, thường đứng sau chữ
+«Không gửi được:»). Ý nghĩa từng lý do và cách gỡ:
 
-| Shown reason | Why | What to do |
+| Lý do hiện ra | Vì sao | Cần làm gì |
 |---|---|---|
-| `not on SEND_ALLOWLIST (safety mode)` | `SEND_MODE=allowlist` | Add the X username to `SEND_ALLOWLIST`, or switch to `SEND_MODE=live` (manual channel) |
-| `daily cap reached (n/cap)` | `DAILY_SEND_CAP` messages already sent or in progress in the last 24 hours | Wait, or raise `DAILY_SEND_CAP` |
-| `marked do-not-contact` | You switched on `Do not contact` for this person | Switch it off in **Track** if that was a mistake |
-| `not approved` | Only approved messages can be sent | Approve it in **Review** |
-| `evidence not verified — edit the text first` | A quote in the draft is not word for word in its source | Read the draft against the evidence and edit it; approving is then your call |
-| `existing conversation` | You pressed `Already in contact`, or the API found an earlier conversation | None: the tool never messages that person again |
-| `api channel is limited to SEND_ALLOWLIST (X automation rules)` | See above | Use the manual channel |
-| `recipient does not accept DMs from this account` | API channel: X says their DMs are closed to you | Skip the person |
-| Status `unknown` in **Needs attention** | API channel: X did not answer in time, so the tool cannot tell whether the DM went out | Check the conversation in X, then press `It was sent` or `It was not sent`. The tool never resends by itself |
-| GitHub rate limit, with a retry time | GitHub allows 30 searches per minute and 5,000 calls per hour per token | Wait until the time shown. People already found are saved |
+| `not on SEND_ALLOWLIST (safety mode)` | Đang bật `SEND_MODE=allowlist` | Thêm tên X của người đó vào `SEND_ALLOWLIST`, hoặc đổi sang `SEND_MODE=live` (kênh tự tay gửi) |
+| `daily cap reached (n/cap)` | Đã gửi hoặc đang gửi đủ `DAILY_SEND_CAP` tin trong 24 giờ qua | Chờ, hoặc tăng `DAILY_SEND_CAP` |
+| `marked do-not-contact` | Bạn đã bật «Không liên hệ» cho người này | Tắt nó ở tab **Theo dõi** nếu bật nhầm |
+| `not approved` | Chỉ tin đã duyệt mới gửi được | Duyệt tin ở tab **Duyệt tin** |
+| `evidence not verified — edit the text first` | Có câu trích trong bản nháp không khớp từng chữ với nguồn | Đọc bản nháp so với bằng chứng rồi sửa; sau đó duyệt hay không là do bạn quyết |
+| `existing conversation` | Bạn đã bấm `Đã liên hệ từ trước`, hoặc API thấy hai bên đã từng nhắn nhau | Không cần làm gì: công cụ sẽ không bao giờ nhắn người đó nữa |
+| `api channel is limited to SEND_ALLOWLIST (X automation rules)` | Xem mục trên | Dùng kênh tự tay gửi |
+| `recipient does not accept DMs from this account` | Kênh API: X báo người này không nhận DM từ bạn | Bỏ qua người này |
+| Trạng thái `unknown` trong **Cần xử lý** | Kênh API: X không phản hồi kịp, nên công cụ không biết DM đã đi hay chưa | Xem hội thoại trên X, rồi bấm `Tin đã đi` hoặc `Tin chưa đi`. Công cụ không bao giờ tự gửi lại |
+| GitHub chạm giới hạn số lần gọi, kèm giờ thử lại | GitHub cho mỗi token 30 lượt tìm mỗi phút và 5.000 lệnh gọi mỗi giờ | Chờ tới giờ được báo. Những người đã tìm được vẫn được lưu |
 
-Known limits:
-- X Native mode has run only on sample data and mocked X responses, never against the live X API.
-- GitHub mode finds only people who list an X account on their GitHub profile. In two real searches, 254 of 264 and
-  480 of 510 GitHub accounts checked had none.
-- X search covers posts from the last 7 days only.
-- Sync Replies detects the first reply to each message; a later reply after `Mark handled` needs `Mark replied` by hand.
-  Without Sync (Mode 1), replies are always marked by hand.
-- Drafts quote at most 120 characters, cut at a word boundary, so a quote can end mid-sentence. Edit it in review.
-- People need a fit score of at least 40 to get a draft. There are no automatic follow-ups.
-- Both modes share one prospect list per campaign.
-- A real GitHub search checks every account it finds and can take several minutes. The page shows no progress
-  until it finishes.
+Giới hạn đã biết:
+- Chế độ X gốc mới chạy với dữ liệu mẫu và phản hồi X giả lập, chưa từng chạy với X API thật.
+- Chế độ GitHub chỉ tìm được người có ghi tài khoản X trên hồ sơ GitHub. Trong hai lần tìm thật, 254/264 và 480/510
+  tài khoản GitHub được kiểm không có.
+- Tìm trên X chỉ thấy bài đăng trong 7 ngày gần nhất.
+- «Lấy trả lời từ X» chỉ nhận ra câu trả lời đầu tiên của mỗi tin; nếu người đó nhắn tiếp sau khi bạn đã bấm
+  `Đã xử lý xong` thì phải bấm `Đánh dấu đã trả lời` bằng tay. Không có tính năng này (chế độ 1) thì luôn đánh dấu
+  bằng tay.
+- Câu trích dài tối đa 120 ký tự, cắt ở ranh giới từ, nên có thể dừng giữa câu. Hãy sửa lại khi duyệt.
+- Người cần điểm phù hợp từ 40 trở lên mới được soạn nháp. Không có tin nhắn nhắc lại tự động.
+- Hai chế độ dùng chung một danh sách người cho mỗi chiến dịch.
+- Một lần tìm thật trên GitHub kiểm từng tài khoản tìm được, có thể mất vài phút. Trang không hiện tiến độ cho tới khi
+  xong.
 
 ---
 
-## Test Suite
+## Chạy test
 
-Run the full offline test suite (149 tests) to verify system integrity:
+Chạy toàn bộ 149 test (không cần mạng) để kiểm tra hệ thống:
 ```bash
 pytest -q
 ```
-All unit and smoke tests run with network calls disabled to ensure strict isolation.
+Mọi test đều chạy khi lệnh gọi mạng bị tắt, để kết quả không phụ thuộc bên ngoài.
 
 ---
 
-## Platform Compliance & Safety Rationale
+## Tuân thủ nền tảng và lý do an toàn
 
-Cold outreach operates in a sensitive regulatory and platform environment:
-1. **X Automation Rules:** X strictly forbids unsolicited bulk or automated DMs. 
-   - The **GitHub Builder Mode** keeps sending manual: $0 cost, and a person presses Send for every DM.
-   - The **X API Channel** restricts automated dispatch strictly to accounts listed in `SEND_ALLOWLIST`, preventing accidental mass messaging.
-2. **GitHub Acceptable Use Policy:** GitHub API data is collected strictly for relevant ecosystem outreach without scraping or spamming.
-3. **Anti-Hallucination Guard:** Language models cannot invent facts. Any quote generated must exist verbatim inside source repositories or bios (`evidence_ok=1`), or approval is rejected until human verification.
-4. **Permanent Deduping:** Message records use a `UNIQUE(prospect_id)` constraint in SQLite. No prospect can ever receive a duplicate outreach message.
+Nhắn tin làm quen người lạ (cold outreach) chạm tới luật của nền tảng và quy định, nên công cụ làm như sau:
+1. **Luật tự động hoá của X:** X cấm gửi DM hàng loạt hoặc tự động cho người không yêu cầu.
+   - **Chế độ GitHub** để việc gửi là thủ công: 0 USD, và mỗi DM đều do một người bấm Gửi.
+   - **Kênh X API** chỉ gửi tự động tới các tài khoản trong `SEND_ALLOWLIST`, để không lỡ tay nhắn hàng loạt.
+2. **Chính sách sử dụng của GitHub:** dữ liệu GitHub API chỉ dùng để liên hệ đúng người trong lĩnh vực, không cào
+   dữ liệu (scraping), không spam.
+3. **Chặn bịa đặt:** mô hình AI không được bịa thông tin. Câu trích nào cũng phải có nguyên văn trong kho mã hoặc tiểu
+   sử nguồn (`evidence_ok=1`); nếu không, app không cho duyệt cho tới khi người kiểm và sửa.
+4. **Chống trùng vĩnh viễn:** bảng tin nhắn trong SQLite có ràng buộc `UNIQUE(prospect_id)`. Không ai có thể nhận
+   hai tin làm quen.
 
 ---
 
-## Configuration Reference (`.env`)
+## Bảng cấu hình (`.env`)
 
-| Variable | Default | Description |
+| Biến | Mặc định | Ý nghĩa |
 |:---|:---|:---|
-| `X_MODE` | `real` | `real` for live GitHub and X APIs; `fake` for offline unit testing. |
-| `GITHUB_TOKEN` | `""` | GitHub Personal Access Token (read-only public repos). |
-| `SEND_CHANNEL` | `manual` | `manual` (clipboard + profile link) or `api` (X API v2). |
-| `SEND_MODE` | `allowlist` | `allowlist` (only `SEND_ALLOWLIST` can receive messages) or `live`. |
-| `SEND_ALLOWLIST` | `""` | Comma-separated X handles permitted during testing. |
-| `DAILY_SEND_CAP` | `20` | Maximum messages allowed within a rolling 24-hour window. |
-| `LLM_PROVIDER` | `template` | `template` ($0), `ollama` ($0 local), or `anthropic` (paid API). |
-| `OLLAMA_MODEL` | `qwen3:4b` | Ollama model name when `LLM_PROVIDER=ollama`. |
-| `ANTHROPIC_API_KEY`| `""` | API key required when `LLM_PROVIDER=anthropic`. |
-| `X_CLIENT_ID` | `""` | OAuth 2.0 Client ID for X API DM channel. |
-| `X_CLIENT_SECRET` | `""` | OAuth 2.0 Client Secret for X API DM channel. |
-| `X_REDIRECT_URI` | `http://127.0.0.1:8765/callback` | OAuth redirect URI registered in the X Developer Portal. |
+| `X_MODE` | `real` | `real`: dùng GitHub và X API thật; `fake`: dữ liệu mẫu, không cần mạng (dùng để thử). |
+| `GITHUB_TOKEN` | `""` | Token GitHub (chỉ đọc kho công khai). |
+| `SEND_CHANNEL` | `manual` | `manual` (tự tay gửi: sao chép tin + mở trang X) hoặc `api` (X API v2). |
+| `SEND_MODE` | `allowlist` | `allowlist` (chỉ người trong `SEND_ALLOWLIST` nhận được tin) hoặc `live`. |
+| `SEND_ALLOWLIST` | `""` | Các tên X được phép nhận tin khi thử, cách nhau bằng dấu phẩy. |
+| `DAILY_SEND_CAP` | `20` | Số tin tối đa trong 24 giờ gần nhất. |
+| `LLM_PROVIDER` | `template` | `template` (0 USD), `ollama` (0 USD, chạy trên máy) hoặc `anthropic` (API trả phí). |
+| `OLLAMA_MODEL` | `qwen3:4b` | Tên mô hình Ollama khi `LLM_PROVIDER=ollama`. |
+| `ANTHROPIC_API_KEY`| `""` | Khoá API, bắt buộc khi `LLM_PROVIDER=anthropic`. |
+| `X_CLIENT_ID` | `""` | OAuth 2.0 Client ID cho kênh DM qua X API. |
+| `X_CLIENT_SECRET` | `""` | OAuth 2.0 Client Secret cho kênh DM qua X API. |
+| `X_REDIRECT_URI` | `http://127.0.0.1:8765/callback` | Địa chỉ X gọi lại sau khi đăng nhập, phải trùng với địa chỉ đã đăng ký trong X Developer Portal. |
 
 ---
 
-## Troubleshooting
+## Gỡ lỗi thường gặp
 
-| Symptom | Cause | Solution |
+| Dấu hiệu | Nguyên nhân | Cách xử lý |
 |:---|:---|:---|
-| `doctor: Missing required configuration keys: GITHUB_TOKEN` | Token missing in `.env` | Add a valid GitHub personal access token to `.env`. |
-| `doctor: GitHub rejected GITHUB_TOKEN` | Invalid/expired token | Generate a new token at [github.com/settings/tokens](https://github.com/settings/tokens). |
-| `Can't send: not on SEND_ALLOWLIST (safety mode)` | Safety allowlist active | Add the X username to `SEND_ALLOWLIST` in `.env`. |
-| `evidence not verified — edit the text first` | Quoted evidence does not match source text verbatim | Edit the draft text in the Review tab to match the cited evidence. |
-| `daily cap reached` | Hit rolling 24-hour send threshold | Wait for the window to reset, or adjust `DAILY_SEND_CAP` in `.env`. |
-| `streamlit is not recognized` | Virtual environment inactive | Run `.venv\Scripts\activate` (Windows) or `source .venv/bin/activate` (macOS/Linux). |
+| `doctor: Missing required configuration keys: GITHUB_TOKEN` | `.env` chưa có token | Thêm token GitHub hợp lệ vào `.env`. |
+| `doctor: GitHub rejected GITHUB_TOKEN` | Token sai hoặc hết hạn | Tạo token mới tại [github.com/settings/tokens](https://github.com/settings/tokens). |
+| `Không gửi được: not on SEND_ALLOWLIST (safety mode)` | Đang bật danh sách cho phép | Thêm tên X của người đó vào `SEND_ALLOWLIST` trong `.env`. |
+| `evidence not verified — edit the text first` | Câu trích không khớp nguyên văn với nguồn | Sửa bản nháp ở tab Duyệt tin cho khớp bằng chứng. |
+| `daily cap reached` | Đã chạm trần số tin trong 24 giờ | Chờ qua khung 24 giờ, hoặc chỉnh `DAILY_SEND_CAP` trong `.env`. |
+| `streamlit is not recognized` | Chưa bật môi trường ảo | Chạy `.venv\Scripts\activate` (Windows) hoặc `source .venv/bin/activate` (macOS/Linux). |
 
 ---
 
-## Data Privacy & Storage
+## Quyền riêng tư và lưu trữ
 
-All data is stored exclusively on your local machine in SQLite (`data/outreach.db`). Credentials and tokens remain strictly inside `.env` and are never committed to version control. Streamlit telemetry is disabled via `.streamlit/config.toml`.
+Mọi dữ liệu chỉ nằm trên máy bạn, trong SQLite (`data/outreach.db`). Khoá và token chỉ nằm trong `.env`, không bao giờ
+được commit lên git. Streamlit đã tắt gửi số liệu sử dụng (telemetry) trong `.streamlit/config.toml`.

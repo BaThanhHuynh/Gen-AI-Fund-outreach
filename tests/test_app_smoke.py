@@ -135,8 +135,8 @@ def test_drafting_error_shows_no_success_message(tmp_path, monkeypatch):
 
     monkeypatch.setattr(llm, "get_drafter", lambda conn: down)
     at = _drafts(_app(tmp_path, monkeypatch).run())
-    assert [e.value for e in at.error] == ["Drafting stopped: Ollama is not running"]
-    assert not at.success or all("draft" not in s.value.lower() for s in at.success)
+    assert [e.value for e in at.error] == ["Dừng soạn nháp: Ollama is not running"]
+    assert not at.success or all("nháp" not in s.value.lower() for s in at.success)
 
 
 def test_approved_message_can_be_rejected_in_send(tmp_path, monkeypatch):
@@ -155,7 +155,7 @@ def test_x_native_mode_smoke(tmp_path, monkeypatch):
     at = _app(tmp_path, monkeypatch).run()
 
     # Switch to X Native Mode
-    at.radio(key="app_workflow_mode").set_value("⚡ X Native Mode (Official Take-Home Spec)").run()
+    at.radio(key="app_workflow_mode").set_value("⚡ Chế độ X gốc (đúng đề bài)").run()
     assert not at.exception
 
     # Create campaign
@@ -226,7 +226,7 @@ def test_x_sync_failure_shows_error_not_traceback(tmp_path, monkeypatch):
 
     monkeypatch.setattr(x_sync, "sync_x_replies", boom)
     at = _app(tmp_path, monkeypatch).run()
-    at.radio(key="app_workflow_mode").set_value("⚡ X Native Mode (Official Take-Home Spec)").run()
+    at.radio(key="app_workflow_mode").set_value("⚡ Chế độ X gốc (đúng đề bài)").run()
     at.button(key="sync_x_replies_btn").click().run()
     assert not at.exception
     assert any("X is down" in e.value for e in at.error)

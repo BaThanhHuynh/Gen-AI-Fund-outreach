@@ -43,8 +43,8 @@ def act(fn, *args) -> None:
 
 
 def manual_buttons(mid: int, where: str) -> None:
-    for col, (label, outcome) in zip(st.columns(3), [("I sent it", "sent"), ("Not sent", "not_sent"),
-                                                     ("Already in contact", "existing")]):
+    for col, (label, outcome) in zip(st.columns(3), [("Tôi đã gửi", "sent"), ("Chưa gửi", "not_sent"),
+                                                     ("Đã liên hệ từ trước", "existing")]):
         if col.button(label, key=f"{where}_{outcome}_{mid}"):
             act(sender.confirm_manual, conn, mid, outcome)
 
@@ -70,171 +70,173 @@ if note := st.session_state.pop("flash", None):
     st.info(note)
 
 with st.sidebar:
-    st.subheader("WORKFLOW MODE")
+    st.subheader("CHẾ ĐỘ LÀM VIỆC")
     mode = st.radio(
-        "Approach",
+        "Cách làm",
         [
-            "🛡️ GitHub Builder Mode ($0 Cost & Safety)",
-            "⚡ X Native Mode (Official Take-Home Spec)",
+            "🛡️ Chế độ GitHub (0 USD, an toàn)",
+            "⚡ Chế độ X gốc (đúng đề bài)",
         ],
         index=0,
         key="app_workflow_mode",
-        help="Switch between zero-cost GitHub discovery ($0, platform-safe) and direct X-native discovery & automation."
+        help="Chuyển giữa tìm người qua GitHub (0 USD, an toàn với nền tảng) và tìm người, gửi tin trực tiếp trên X."
     )
     is_x_native = mode.startswith("⚡")
     st.markdown("---")
-    st.subheader("TEST MODE (OFFLINE)" if config.X_MODE == "fake" else "LIVE (REAL DATA)")
+    st.subheader("CHẾ ĐỘ THỬ (KHÔNG CẦN MẠNG)" if config.X_MODE == "fake" else "CHẠY THẬT (DỮ LIỆU THẬT)")
     if is_x_native:
-        st.caption("Mode: Direct X Discovery & Automation")
-        st.write("Channel: X API v2 (Direct)")
+        st.caption("Chế độ: tìm người và gửi tin trực tiếp trên X")
+        st.write("Kênh gửi: X API v2 (trực tiếp)")
         me = db.kv_get(conn, "me")
         if me:
-            st.write(f"Connected as @{me['username']}")
-        elif st.button("Connect X account", key="connect_x_btn"):
+            st.write(f"Đã kết nối: @{me['username']}")
+        elif st.button("Kết nối tài khoản X", key="connect_x_btn"):
             act(auth.login, conn)
     else:
-        st.caption("Mode: GitHub Discovery & Manual Outreach")
+        st.caption("Chế độ: tìm người qua GitHub, tự tay gửi tin")
         if config.SEND_CHANNEL == "manual":
-            st.write("Channel: Manual — you send in X")
+            st.write("Kênh gửi: thủ công — bạn tự gửi trên X")
         else:
-            st.write("Channel: X API")
+            st.write("Kênh gửi: X API")
             me = db.kv_get(conn, "me")
             if me:
-                st.write(f"Connected as @{me['username']}")
-            elif st.button("Connect X account", key="connect_x_btn"):
+                st.write(f"Đã kết nối: @{me['username']}")
+            elif st.button("Kết nối tài khoản X", key="connect_x_btn"):
                 act(auth.login, conn)
     if config.X_MODE == "fake" or config.LLM_PROVIDER == "template":
-        writer = "template"
+        writer = "mẫu có sẵn (template)"
     else:
         writer = f"ollama: {config.OLLAMA_MODEL}" if config.LLM_PROVIDER == "ollama" else "anthropic"
-    st.write(f"Drafts: {writer}")
-    st.write(f"Sent in last 24h: {sender.sends_in_last_24h(conn)} / {config.DAILY_SEND_CAP}")
+    st.write(f"Soạn nháp bằng: {writer}")
+    st.write(f"Đã gửi trong 24 giờ qua: {sender.sends_in_last_24h(conn)} / {config.DAILY_SEND_CAP}")
     if config.SEND_MODE == "allowlist":
-        st.write("ALLOWLIST: only " + (", ".join(f"@{a}" for a in config.SEND_ALLOWLIST) or "nobody"))
+        st.write("DANH SÁCH CHO PHÉP: chỉ " + (", ".join(f"@{a}" for a in config.SEND_ALLOWLIST) or "không ai"))
     else:
-        st.write("Send mode: LIVE")
-    st.write(f"Spend today: ${db.spend_since(conn, today_start_utc()):.2f}")
+        st.write("Chế độ gửi: THẬT (live)")
+    st.write(f"Chi phí hôm nay: ${db.spend_since(conn, today_start_utc()):.2f}")
 
-find_tab, review_tab, send_tab, track_tab = st.tabs(["Find", "Review", "Send", "Track"])
+find_tab, review_tab, send_tab, track_tab = st.tabs(["Tìm người", "Duyệt tin", "Gửi tin", "Theo dõi"])
 
 with find_tab:
     camps = {c["id"]: c for c in rows("SELECT * FROM campaigns ORDER BY id DESC")}
-    with st.expander("New campaign", expanded=not camps):
-        name = st.text_input("Name", key="c_name")
-        segment = st.text_area("Who are you looking for?", key="c_segment")
-        keywords = st.text_input("Keywords, comma-separated (used to search and to score)", key="c_keywords")
-        context = st.text_area("Sender context: who we are and what we want from the conversation", key="c_context")
-        if st.button("Create campaign", key="c_create"):
+    with st.expander("Chiến dịch mới", expanded=not camps):
+        name = st.text_input("Tên", key="c_name")
+        segment = st.text_area("Bạn đang tìm ai?", key="c_segment")
+        keywords = st.text_input("Từ khoá, cách nhau bằng dấu phẩy (dùng để tìm và chấm điểm)", key="c_keywords")
+        context = st.text_area("Giới thiệu người gửi: chúng ta là ai, muốn gì từ cuộc trò chuyện", key="c_context")
+        if st.button("Tạo chiến dịch", key="c_create"):
             if all(v.strip() for v in (name, segment, keywords, context)):
                 with conn:
                     conn.execute("INSERT INTO campaigns (name, segment, keywords, sender_context, created_at) "
                                  "VALUES (?, ?, ?, ?, ?)", (name.strip(), segment.strip(), keywords.strip(),
                                                             context.strip(), db.now()))
                 st.rerun()
-            st.error("Fill in all four fields.")
-    cid = st.selectbox("Campaign", list(camps), format_func=lambda i: camps[i]["name"]) if camps else None
+            st.error("Hãy điền đủ cả bốn ô.")
+    cid = st.selectbox("Chiến dịch", list(camps), format_func=lambda i: camps[i]["name"]) if camps else None
 
     if cid:
         def find_people(fn, *args) -> None:
             try:
                 c = fn(conn, get_github(), cid, *args)
             except GitHubRateLimited as e:
-                st.error("GitHub rate limit reached. People found so far are saved. Try again after "
-                         f"{datetime.fromtimestamp(e.reset_at):%H:%M} (your local time).")
+                st.error("GitHub đã chạm giới hạn số lần gọi. Những người tìm được đến giờ đã được lưu. Thử lại sau "
+                         f"{datetime.fromtimestamp(e.reset_at):%H:%M} (giờ trên máy bạn).")
             except GitHubError as e:
                 st.error(str(e))
             else:
-                st.success(f"{c['new']} new, {c['existing']} already known, {c['no_x_handle']} people had no X "
-                           f"handle ({c['checked']} GitHub accounts checked).")
+                st.success(f"{c['new']} người mới, {c['existing']} người đã có, {c['no_x_handle']} người không có "
+                           f"tài khoản X (đã kiểm {c['checked']} tài khoản GitHub).")
 
         def logins(raw: str) -> list[str]:
             return [s.strip().lstrip("@") for s in raw.split(",") if s.strip()]
 
         if is_x_native:
-            st.markdown("##### ⚡ Direct Discovery on X (Tweets & Bios)")
-            st.caption("Search recent builder tweets, discover who X seed accounts follow, or import X handles.")
-            x_query = st.text_input("X search query (X search syntax: OR between phrases)",
+            st.markdown("##### ⚡ Tìm người trực tiếp trên X (bài đăng và tiểu sử)")
+            st.caption("Tìm bài đăng gần đây của người làm AI/robot, xem các tài khoản X gốc đang theo dõi ai, "
+                       "hoặc thêm tài khoản X có sẵn.")
+            x_query = st.text_input("Câu tìm kiếm trên X (cú pháp của X: OR giữa các cụm từ)",
                                     value=x_discover.search_query(camps[cid]["keywords"]), key="x_search_q")
             col_x1, _ = st.columns([1, 1])
-            if col_x1.button("Search on X", key="x_search"):
+            if col_x1.button("Tìm trên X", key="x_search"):
                 try:
                     c = x_discover.discover_by_x_search(conn, get_app_x(conn), cid, x_query, max_results=10)
-                    st.success(f"{c['new']} new prospects, {c['existing']} already known ({c['checked']} X accounts checked).")
+                    st.success(f"{c['new']} người mới, {c['existing']} người đã có (đã kiểm {c['checked']} tài khoản X).")
                 except Exception as e:
-                    st.error(f"X search failed: {e}")
+                    st.error(f"Tìm trên X thất bại: {e}")
 
-            x_seeds = st.text_input("Seed X accounts (comma-separated, e.g. alex_builder, sarah_robotics)", key="x_seeds")
-            if st.button("Find people they follow on X", key="x_seed_go") and logins(x_seeds):
+            x_seeds = st.text_input("Tài khoản X gốc (cách nhau bằng dấu phẩy, vd. alex_builder, sarah_robotics)",
+                                    key="x_seeds")
+            if st.button("Tìm người họ theo dõi trên X", key="x_seed_go") and logins(x_seeds):
                 try:
                     c = x_discover.discover_by_x_seeds(conn, get_app_x(conn), cid, logins(x_seeds))
-                    st.success(f"{c['new']} new prospects, {c['existing']} already known ({c['checked']} accounts checked).")
+                    st.success(f"{c['new']} người mới, {c['existing']} người đã có (đã kiểm {c['checked']} tài khoản).")
                 except Exception as e:
-                    st.error(f"X seed search failed: {e}")
+                    st.error(f"Tìm từ tài khoản X gốc thất bại: {e}")
 
-            x_adds = st.text_input("Add X accounts (comma-separated)", key="x_adds")
-            if st.button("Add on X", key="x_add_go") and logins(x_adds):
+            x_adds = st.text_input("Thêm tài khoản X (cách nhau bằng dấu phẩy)", key="x_adds")
+            if st.button("Thêm từ X", key="x_add_go") and logins(x_adds):
                 try:
                     c = x_discover.import_x_usernames(conn, get_app_x(conn), cid, logins(x_adds))
-                    st.success(f"{c['new']} new prospects, {c['existing']} already known ({c['checked']} accounts checked).")
+                    st.success(f"{c['new']} người mới, {c['existing']} người đã có (đã kiểm {c['checked']} tài khoản).")
                 except Exception as e:
-                    st.error(f"X import failed: {e}")
+                    st.error(f"Thêm tài khoản X thất bại: {e}")
 
-            if st.button("Score", key="score"):
-                st.success(f"Scored {fit.score_campaign(conn, cid)} people based on X tweets & bio.")
+            if st.button("Chấm điểm", key="score"):
+                st.success(f"Đã chấm điểm {fit.score_campaign(conn, cid)} người dựa trên bài đăng và tiểu sử X.")
 
             people = rows("SELECT * FROM prospects WHERE campaign_id = ? ORDER BY fit_score DESC, id", cid)
             if people:
-                st.dataframe([{"X Profile": f"https://x.com/{p['x_username']}",
-                               "Score": p["fit_score"],
-                               "Type": p["fit_category"],
-                               "Why / Evidence": "; ".join(r["claim"] for r in json.loads(p["fit_reasons"] or "[]"))}
+                st.dataframe([{"Hồ sơ X": f"https://x.com/{p['x_username']}",
+                               "Điểm": p["fit_score"],
+                               "Loại": p["fit_category"],
+                               "Lý do / bằng chứng": "; ".join(r["claim"] for r in json.loads(p["fit_reasons"] or "[]"))}
                               for p in people],
-                             column_config={"X Profile": st.column_config.LinkColumn()}, hide_index=True)
+                             column_config={"Hồ sơ X": st.column_config.LinkColumn()}, hide_index=True)
         else:
             phrases = [k.strip() for k in camps[cid]["keywords"].split(",") if k.strip()]
-            st.caption(f"Search GitHub runs {len(discover.search_queries(phrases))} searches "
-                       "(each keyword × each Southeast Asian location).")
-            if st.button("Search GitHub", key="search"):
+            st.caption(f"«Tìm trên GitHub» chạy {len(discover.search_queries(phrases))} lượt tìm "
+                       "(mỗi từ khoá × mỗi địa điểm ở Đông Nam Á).")
+            if st.button("Tìm trên GitHub", key="search"):
                 find_people(discover.discover_by_segment, phrases)
-            seeds = st.text_input("Seed GitHub accounts (comma-separated)", key="seeds")
-            if st.button("Find people they follow", key="seed_go") and logins(seeds):
+            seeds = st.text_input("Tài khoản GitHub gốc (cách nhau bằng dấu phẩy)", key="seeds")
+            if st.button("Tìm người họ theo dõi", key="seed_go") and logins(seeds):
                 find_people(discover.discover_by_seeds, logins(seeds))
-            adds = st.text_input("Add GitHub accounts (comma-separated)", key="adds")
-            if st.button("Add", key="add_go") and logins(adds):
+            adds = st.text_input("Thêm tài khoản GitHub (cách nhau bằng dấu phẩy)", key="adds")
+            if st.button("Thêm", key="add_go") and logins(adds):
                 find_people(discover.import_logins, logins(adds))
-            if st.button("Score", key="score"):
-                st.success(f"Scored {fit.score_campaign(conn, cid)} people.")
+            if st.button("Chấm điểm", key="score"):
+                st.success(f"Đã chấm điểm {fit.score_campaign(conn, cid)} người.")
 
             people = rows("SELECT * FROM prospects WHERE campaign_id = ? ORDER BY fit_score DESC, id", cid)
             if people:
                 st.dataframe([{"GitHub": f"https://github.com/{p['github_login']}",
-                               "X": f"https://x.com/{p['x_username']}", "Score": p["fit_score"],
-                               "Type": p["fit_category"],
-                               "Why": "; ".join(r["claim"] for r in json.loads(p["fit_reasons"] or "[]"))}
+                               "X": f"https://x.com/{p['x_username']}", "Điểm": p["fit_score"],
+                               "Loại": p["fit_category"],
+                               "Lý do": "; ".join(r["claim"] for r in json.loads(p["fit_reasons"] or "[]"))}
                               for p in people],
                              column_config={"GitHub": st.column_config.LinkColumn(),
                                             "X": st.column_config.LinkColumn()}, hide_index=True)
 
 with review_tab:
     if not cid:
-        st.info("Create a campaign in Find first.")
+        st.info("Hãy tạo chiến dịch ở tab «Tìm người» trước.")
     else:
-        n = st.number_input("How many drafts", min_value=1, max_value=50, value=5, key="draft_n")
-        if st.button(f"Draft next {n}", key="draft"):
-            bar, tried, drafter = st.progress(0.0, "Drafting…"), [], llm.get_drafter(conn)
+        n = st.number_input("Số bản nháp", min_value=1, max_value=50, value=5, key="draft_n")
+        if st.button(f"Soạn {n} bản nháp tiếp theo", key="draft"):
+            bar, tried, drafter = st.progress(0.0, "Đang soạn…"), [], llm.get_drafter(conn)
 
             def draft_one(*args):  # moves the bar per person: a local model can take a minute per draft
                 tried.append(1)
-                bar.progress(min(len(tried) / n, 1.0), f"Drafting person {len(tried)}…")
+                bar.progress(min(len(tried) / n, 1.0), f"Đang soạn cho người thứ {len(tried)}…")
                 return drafter(*args)
 
             try:  # one pass, so a person whose draft failed is not retried (each call can be slow or paid)
                 made = llm.draft_for_campaign(conn, draft_one, cid, limit=n)
             except Exception as e:  # Ollama down, Anthropic key or quota: stop the batch and say why
-                st.error(f"Drafting stopped: {e}")
+                st.error(f"Dừng soạn nháp: {e}")
             else:
-                st.success(f"{made} new drafts." if made else "Nobody left to draft (score below the minimum, "
-                                                              "do-not-contact, or already has a message).")
+                st.success(f"{made} bản nháp mới." if made else "Không còn ai để soạn nháp (điểm dưới mức tối thiểu, "
+                                                                "đã đánh dấu không liên hệ, hoặc đã có tin nhắn).")
 
         drafts = rows("SELECT m.*, p.name, p.github_login, p.x_username, p.bio, p.location, p.company, "
                       "p.fit_score, p.fit_category, p.fit_reasons FROM messages m "
@@ -247,12 +249,12 @@ with review_tab:
             with st.container(border=True):
                 # plain text: profile fields are untrusted, and no X link before Start reserves the message
                 st.text(f"{d['name'] or d['github_login'] or d['x_username']} · @{d['x_username']} · "
-                        f"score {d['fit_score']} ({d['fit_category']})")
+                        f"điểm {d['fit_score']} ({d['fit_category']})")
                 if d['github_login']:
-                    st.markdown(f"[GitHub profile](https://github.com/{d['github_login']})")
+                    st.markdown(f"[Hồ sơ GitHub](https://github.com/{d['github_login']})")
                 st.text(" · ".join(x for x in (d["bio"], d["location"], d["company"]) if x))
                 if d["status"] == "failed":
-                    st.error(f"Sending failed: {d['error']}. Edit and approve again, or reject.")
+                    st.error(f"Gửi thất bại: {d['error']}. Sửa rồi duyệt lại, hoặc từ chối.")
                 for r in json.loads(d["fit_reasons"] or "[]"):
                     st.text(f"• {r['claim']}")
                 for ev in json.loads(d["evidence"]):
@@ -262,13 +264,13 @@ with review_tab:
                         st.markdown(f"— [{sid}]({source_url(d['github_login'], sid, d['x_username'])})")
                     else:
                         st.text(f"— {sid}")
-                text = st.text_area("Message", d["text"], key=f"text_{mid}")
+                text = st.text_area("Tin nhắn", d["text"], key=f"text_{mid}")
                 for problem in llm.draft_problems(text, texts[:i] + texts[i + 1:]):
                     st.warning(problem)
                 if not d["evidence_ok"]:
-                    st.warning("The quotes were not found in their sources. Edit the text before approving.")
+                    st.warning("Không tìm thấy câu trích trong nguồn của nó. Hãy sửa nội dung trước khi duyệt.")
                 ok_col, no_col = st.columns(2)
-                if ok_col.button("Approve", key=f"approve_{mid}"):
+                if ok_col.button("Duyệt", key=f"approve_{mid}"):
                     try:
                         if text.strip() != d["text"]:
                             review.set_text(conn, mid, text)
@@ -279,14 +281,14 @@ with review_tab:
                         st.error(reason)
                     else:
                         st.rerun()
-                if no_col.button("Reject", key=f"reject_{mid}"):
+                if no_col.button("Từ chối", key=f"reject_{mid}"):
                     act(review.reject, conn, mid)
 
 with send_tab:
     approved = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
                     "WHERE m.status = 'approved' ORDER BY m.id")
     if not approved:
-        st.info("No approved messages.")
+        st.info("Chưa có tin nhắn nào được duyệt.")
     for m in approved:
         mid = m["id"]
         with st.container(border=True):
@@ -294,118 +296,120 @@ with send_tab:
             st.text(m["text"])
             reason = sender.check_can_send(conn, mid)
             if reason:
-                st.caption(f"Can't send: {reason}")
+                st.caption(f"Không gửi được: {reason}")
             elif is_x_native:
                 c_s1, c_s2, c_s3 = st.columns([2, 1, 1])
-                if c_s1.button("⚡ Send via X API", key=f"api_{mid}"):
+                if c_s1.button("⚡ Gửi qua X API", key=f"api_{mid}"):
                     try:
                         st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
                     except Exception as e:
                         st.error(str(e))
                     else:
                         st.rerun()
-                if c_s2.button("Send manual", key=f"start_{mid}"):
+                if c_s2.button("Tự tay gửi", key=f"start_{mid}"):
                     act(sender.open_manual, conn, mid)
-                if c_s3.button("Reject", key=f"send_reject_{mid}"):
+                if c_s3.button("Từ chối", key=f"send_reject_{mid}"):
                     act(review.reject, conn, mid)
             elif config.SEND_CHANNEL == "manual":
-                if st.button("Start", key=f"start_{mid}"):
+                if st.button("Bắt đầu gửi", key=f"start_{mid}"):
                     act(sender.open_manual, conn, mid)
-            elif st.button("Send via X API", key=f"api_{mid}"):
+            elif st.button("Gửi qua X API", key=f"api_{mid}"):
                 try:
                     st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
                 except Exception as e:  # SendBlocked reason, or the X error that stopped the pre-send checks
                     st.error(str(e))
                 else:
                     st.rerun()
-            if not is_x_native and st.button("Reject", key=f"send_reject_{mid}"):
+            if not is_x_native and st.button("Từ chối", key=f"send_reject_{mid}"):
                 act(review.reject, conn, mid)
 
     waiting = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
                    "WHERE m.status = 'sending' AND m.channel = 'manual' ORDER BY m.id")
     if waiting:
-        st.subheader("Waiting for you to send")
+        st.subheader("Đang chờ bạn gửi")
     for m in waiting:
         with st.container(border=True):
             st.code(m["text"], language=None, wrap_lines=True)
-            st.link_button(f"Open @{m['x_username']} on X", f"https://x.com/{m['x_username']}")
-            st.write("Click Message on their profile, paste, send — then confirm below.")
+            st.link_button(f"Mở @{m['x_username']} trên X", f"https://x.com/{m['x_username']}")
+            st.write("Bấm nút Message (Nhắn tin) trên trang của họ, dán tin, gửi — rồi xác nhận bên dưới.")
             manual_buttons(m["id"], "send")
 
 with track_tab:
     n_sent, n_replied = rows("SELECT COUNT(*), COUNT(replied_at) FROM messages WHERE status = 'sent'")[0]
     a, b, c = st.columns(3)
-    a.metric("Sent", n_sent)
-    b.metric("Replied", n_replied)
-    c.metric("Reply rate", f"{n_replied / n_sent:.0%}" if n_sent else "—")
+    a.metric("Đã gửi", n_sent)
+    b.metric("Đã trả lời", n_replied)
+    c.metric("Tỉ lệ trả lời", f"{n_replied / n_sent:.0%}" if n_sent else "—")
 
     if is_x_native:
-        st.subheader("⚡ Auto-Sync Replies from X")
-        st.caption("Fetch newest DM events via X API to automatically detect who replied and update tracking.")
-        if st.button("🔄 Sync Replies from X", key="sync_x_replies_btn"):
+        st.subheader("⚡ Tự lấy câu trả lời từ X")
+        st.caption("Đọc các tin nhắn riêng (DM) mới nhất qua X API để tự biết ai đã trả lời và cập nhật bảng theo dõi.")
+        if st.button("🔄 Lấy trả lời từ X", key="sync_x_replies_btn"):
             try:
                 res = x_sync.sync_x_replies(conn, get_app_x(conn))
                 if res.get("error"):
-                    st.error(f"Sync error: {res['error']}")
+                    st.error(f"Lỗi khi lấy trả lời: {res['error']}")
                 elif res["new_replies"] > 0:
-                    st.success(f"Synced {res['new_replies']} new replies from: {', '.join(f'@{u}' for u in res['replied_users'])}!")
+                    st.success(f"Có {res['new_replies']} trả lời mới từ: {', '.join(f'@{u}' for u in res['replied_users'])}.")
                     st.rerun()
                 else:
-                    st.info(f"Checked {res['checked_events']} DM events. No new replies found.")
+                    st.info(f"Đã kiểm {res['checked_events']} tin nhắn DM. Chưa có trả lời mới.")
             except Exception as e:
-                st.error(f"Sync failed: {e}")
+                st.error(f"Lấy trả lời thất bại: {e}")
 
     handles = {p["id"]: p["x_username"] for p in rows("SELECT id, x_username FROM prospects")}
-    st.subheader("Needs attention")
+    st.subheader("Cần xử lý")
     items = sender.needs_attention(conn)
     if not items:
-        st.success("Nothing needs your attention.")
+        st.success("Không có gì cần bạn xử lý.")
     for m in items:
         mid = m["id"]
         with st.container(border=True):
             st.markdown(f"**@{handles[m['prospect_id']]}** · {m['status']} · {m['channel'] or ''}")
-            for line in (m["error"], m["reply_text"] and f"Reply: {m['reply_text']}"):
+            for line in (m["error"], m["reply_text"] and f"Trả lời: {m['reply_text']}"):
                 if line:
                     st.text(line)
             if m["status"] == "sending":
                 manual_buttons(mid, "track")
             elif m["status"] == "unknown":
-                st.write("X did not answer in time. Check your X inbox, then:")
+                st.write("X không phản hồi kịp. Hãy xem hộp thư X của bạn, rồi chọn:")
                 yes, no = st.columns(2)
-                if yes.button("It was sent", key=f"was_sent_{mid}"):
+                if yes.button("Tin đã đi", key=f"was_sent_{mid}"):
                     act(sender.resolve_unknown, conn, mid, True)
-                if no.button("It was not sent", key=f"was_not_sent_{mid}"):
+                if no.button("Tin chưa đi", key=f"was_not_sent_{mid}"):
                     act(sender.resolve_unknown, conn, mid, False)
-            elif st.button("Mark handled", key=f"handled_{mid}"):
+            elif st.button("Đã xử lý xong", key=f"handled_{mid}"):
                 act(sender.mark_handled, conn, mid)
 
     unreplied = rows("SELECT id, prospect_id FROM messages WHERE status = 'sent' AND replied_at IS NULL "
                      "ORDER BY sent_at DESC")
     if unreplied:
-        st.subheader("Mark replied")
+        st.subheader("Đánh dấu đã trả lời")
         who = {r["id"]: handles[r["prospect_id"]] for r in unreplied}
-        pick = st.selectbox("Who replied?", list(who), format_func=lambda i: f"@{who[i]}", key="reply_pick")
+        pick = st.selectbox("Ai đã trả lời?", list(who), format_func=lambda i: f"@{who[i]}", key="reply_pick")
         # keys per message: after a click the note box empties and a second click cannot hit the next person
-        reply_note = st.text_input("Note: what they said", key=f"reply_note_{pick}")
-        if st.button("Mark replied", key=f"reply_{pick}"):
+        reply_note = st.text_input("Ghi chú: họ đã nói gì", key=f"reply_note_{pick}")
+        if st.button("Đánh dấu đã trả lời", key=f"reply_{pick}"):
             act(sender.mark_replied, conn, pick, reply_note)
 
-    st.subheader("Send log")
-    log = rows("SELECT p.x_username, m.status, m.channel, m.claimed_at, m.sent_at, m.replied_at, m.error "
+    st.subheader("Nhật ký gửi")
+    log = rows('SELECT p.x_username AS "Tài khoản X", m.status AS "Trạng thái", m.channel AS "Kênh", '
+               'm.claimed_at AS "Bắt đầu lúc", m.sent_at AS "Gửi lúc", m.replied_at AS "Trả lời lúc", '
+               'm.error AS "Lỗi" '
                "FROM messages m JOIN prospects p ON p.id = m.prospect_id "
                "WHERE m.status IN ('sending', 'sent', 'failed', 'blocked', 'unknown') "
                "ORDER BY COALESCE(m.sent_at, m.claimed_at) DESC")
     if log:  # a statement, not a conditional expression: Streamlit "magic" would print the expression's value
         st.dataframe([dict(r) for r in log], hide_index=True)
     else:
-        st.caption("Nothing sent yet.")
+        st.caption("Chưa gửi tin nào.")
 
-    st.subheader("Do not contact")
+    st.subheader("Không liên hệ")
     dnc = {p["id"]: p for p in rows("SELECT id, x_username, do_not_contact FROM prospects ORDER BY x_username")}
     if dnc:
-        pid = st.selectbox("Person", list(dnc), format_func=lambda i: f"@{dnc[i]['x_username']}", key="dnc_pick")
+        pid = st.selectbox("Người", list(dnc), format_func=lambda i: f"@{dnc[i]['x_username']}", key="dnc_pick")
         cur = bool(dnc[pid]["do_not_contact"])  # in the key: a change from another tab rebuilds the toggle
-        on = st.toggle("Do not contact", value=cur, key=f"dnc_{pid}_{int(cur)}")
+        on = st.toggle("Không liên hệ người này", value=cur, key=f"dnc_{pid}_{int(cur)}")
         if on != cur:
             sender.set_do_not_contact(conn, pid, on)
             st.rerun()

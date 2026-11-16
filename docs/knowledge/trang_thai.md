@@ -39,6 +39,9 @@ chưa commit).
   bắt buộc: Sync có thể đếm tin mình gửi là trả lời khi `me()` lỗi; không so giờ với `sent_at`; bảng Find lẫn
   người của chế độ kia; X Native bỏ qua `SEND_CHANNEL`; từ khoá rỗng cho truy vấn X rỗng.
 
+- 16/11/2026 (người dùng): README và nhãn `app.py` sang tiếng Việt; lý do chặn từ `outreach/` giữ tiếng Anh;
+  `docs/demo_script.md` đổi tên nút cho khớp. 149 test qua; chưa commit, chưa xem app bằng mắt.
+
 ## Câu hỏi còn mở
 - `gd-6-ra-soat.md`: bảng hồ sơ ở tab Find vẫn có liên kết X (Claude tự quyết theo kế hoạch). Người dùng muốn bỏ thì
   sửa một dòng ở `app.py`.
