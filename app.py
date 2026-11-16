@@ -82,27 +82,36 @@ with st.sidebar:
         help="Chuyển giữa tìm người qua GitHub (0 USD, an toàn với nền tảng) và tìm người, gửi tin trực tiếp trên X."
     )
     is_x_native = mode.startswith("⚡")
+
+    st.markdown("---")
+    st.subheader("KÊNH GỬI (SEND CHANNEL)")
+    default_ch_idx = 0 if st.session_state.get("send_channel", config.SEND_CHANNEL) == "manual" else 1
+    selected_channel = st.radio(
+        "Phương thức gửi tin",
+        ["manual", "api"],
+        index=default_ch_idx,
+        format_func=lambda c: "🖐️ Thủ công (Manual - $0)" if c == "manual" else "⚡ Tự động (X API v2)",
+        key="app_send_channel_radio",
+        help="Thủ công: Tự copy tin nhắn và mở profile X để bấm gửi ($0, an toàn tuyệt đối). Tự động: Bắn trực tiếp qua X API (cần credit X)."
+    )
+    config.SEND_CHANNEL = selected_channel
+    st.session_state.send_channel = selected_channel
+
+    if selected_channel == "api":
+        me = db.kv_get(conn, "me")
+        if me:
+            st.success(f"Đã kết nối X: @{me['username']}")
+        elif st.button("Kết nối tài khoản X", key="connect_x_btn"):
+            act(auth.login, conn)
+    else:
+        st.caption("Kênh thủ công: an toàn $0, không tốn phí X API")
+
     st.markdown("---")
     st.subheader("CHẾ ĐỘ THỬ (KHÔNG CẦN MẠNG)" if config.X_MODE == "fake" else "CHẠY THẬT (DỮ LIỆU THẬT)")
     if is_x_native:
         st.caption("Chế độ: tìm người và gửi tin trực tiếp trên X")
-        st.write("Kênh gửi: X API v2 (trực tiếp)")
-        me = db.kv_get(conn, "me")
-        if me:
-            st.write(f"Đã kết nối: @{me['username']}")
-        elif st.button("Kết nối tài khoản X", key="connect_x_btn"):
-            act(auth.login, conn)
     else:
-        st.caption("Chế độ: tìm người qua GitHub, tự tay gửi tin")
-        if config.SEND_CHANNEL == "manual":
-            st.write("Kênh gửi: thủ công — bạn tự gửi trên X")
-        else:
-            st.write("Kênh gửi: X API")
-            me = db.kv_get(conn, "me")
-            if me:
-                st.write(f"Đã kết nối: @{me['username']}")
-            elif st.button("Kết nối tài khoản X", key="connect_x_btn"):
-                act(auth.login, conn)
+        st.caption("Chế độ: tìm người qua GitHub, trích dẫn repos")
     if config.X_MODE == "fake" or config.LLM_PROVIDER == "template":
         writer = "mẫu có sẵn (template)"
     else:
@@ -285,6 +294,24 @@ with review_tab:
                     act(review.reject, conn, mid)
 
 with send_tab:
+    # Quick channel status and switcher
+    col_mode_info, col_toggle = st.columns([3, 2])
+    with col_mode_info:
+        st.markdown(f"**Kênh gửi đang chọn:** {'⚡ **Tự động (X API v2)**' if config.SEND_CHANNEL == 'api' else '🖐️ **Thủ công ($0 - Copy & Mở X)**'}")
+    with col_toggle:
+        if config.SEND_CHANNEL == "manual":
+            if st.button("Chuyển sang ⚡ Tự động (X API)", key="quick_switch_to_api"):
+                config.SEND_CHANNEL = "api"
+                st.session_state.send_channel = "api"
+                st.session_state.app_send_channel_radio = "api"
+                st.rerun()
+        else:
+            if st.button("Chuyển sang 🖐️ Thủ công ($0)", key="quick_switch_to_manual"):
+                config.SEND_CHANNEL = "manual"
+                st.session_state.send_channel = "manual"
+                st.session_state.app_send_channel_radio = "manual"
+                st.rerun()
+
     approved = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
                     "WHERE m.status = 'approved' ORDER BY m.id")
     if not approved:
@@ -297,8 +324,8 @@ with send_tab:
             reason = sender.check_can_send(conn, mid)
             if reason:
                 st.caption(f"Không gửi được: {reason}")
-            elif is_x_native:
-                c_s1, c_s2, c_s3 = st.columns([2, 1, 1])
+            elif config.SEND_CHANNEL == "api":
+                c_s1, c_s2 = st.columns([2, 1])
                 if c_s1.button("⚡ Gửi qua X API", key=f"api_{mid}"):
                     try:
                         st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
@@ -308,19 +335,19 @@ with send_tab:
                         st.rerun()
                 if c_s2.button("Tự tay gửi", key=f"start_{mid}"):
                     act(sender.open_manual, conn, mid)
-                if c_s3.button("Từ chối", key=f"send_reject_{mid}"):
-                    act(review.reject, conn, mid)
-            elif config.SEND_CHANNEL == "manual":
-                if st.button("Bắt đầu gửi", key=f"start_{mid}"):
+            else:  # config.SEND_CHANNEL == "manual"
+                c_s1, c_s2 = st.columns([2, 1])
+                if c_s1.button("Bắt đầu gửi", key=f"start_{mid}"):
                     act(sender.open_manual, conn, mid)
-            elif st.button("Gửi qua X API", key=f"api_{mid}"):
-                try:
-                    st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
-                except Exception as e:  # SendBlocked reason, or the X error that stopped the pre-send checks
-                    st.error(str(e))
-                else:
-                    st.rerun()
-            if not is_x_native and st.button("Từ chối", key=f"send_reject_{mid}"):
+                if c_s2.button("⚡ Gửi qua X API", key=f"api_{mid}"):
+                    try:
+                        st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
+                    except Exception as e:
+                        st.error(str(e))
+                    else:
+                        st.rerun()
+
+            if st.button("Từ chối", key=f"send_reject_{mid}"):
                 act(review.reject, conn, mid)
 
     waiting = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
