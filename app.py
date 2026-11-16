@@ -74,24 +74,37 @@ with st.sidebar:
     mode = st.radio(
         "Cách làm",
         [
-            "🛡️ Chế độ GitHub (0 USD, an toàn)",
-            "⚡ Chế độ X gốc (đúng đề bài)",
+            "Chế độ GitHub (miễn phí)",
+            "Chế độ X gốc (có phí)",
         ],
         index=0,
         key="app_workflow_mode",
         help="Chuyển giữa tìm người qua GitHub (0 USD, an toàn với nền tảng) và tìm người, gửi tin trực tiếp trên X."
     )
-    is_x_native = mode.startswith("⚡")
+    is_x_native = "X gốc" in mode or mode.startswith("⚡")
 
     st.markdown("---")
     st.subheader("KÊNH GỬI (SEND CHANNEL)")
-    default_ch_idx = 0 if st.session_state.get("send_channel", config.SEND_CHANNEL) == "manual" else 1
+
+    def set_send_channel(ch: str):
+        config.SEND_CHANNEL = ch
+        st.session_state.send_channel = ch
+        st.session_state.app_send_channel_radio = ch
+
+    if "app_send_channel_radio" not in st.session_state:
+        st.session_state.app_send_channel_radio = st.session_state.get("send_channel", config.SEND_CHANNEL)
+
+    def on_channel_radio_change():
+        ch = st.session_state.app_send_channel_radio
+        config.SEND_CHANNEL = ch
+        st.session_state.send_channel = ch
+
     selected_channel = st.radio(
         "Phương thức gửi tin",
         ["manual", "api"],
-        index=default_ch_idx,
         format_func=lambda c: "🖐️ Thủ công (Manual - $0)" if c == "manual" else "⚡ Tự động (X API v2)",
         key="app_send_channel_radio",
+        on_change=on_channel_radio_change,
         help="Thủ công: Tự copy tin nhắn và mở profile X để bấm gửi ($0, an toàn tuyệt đối). Tự động: Bắn trực tiếp qua X API (cần credit X)."
     )
     config.SEND_CHANNEL = selected_channel
@@ -300,17 +313,9 @@ with send_tab:
         st.markdown(f"**Kênh gửi đang chọn:** {'⚡ **Tự động (X API v2)**' if config.SEND_CHANNEL == 'api' else '🖐️ **Thủ công ($0 - Copy & Mở X)**'}")
     with col_toggle:
         if config.SEND_CHANNEL == "manual":
-            if st.button("Chuyển sang ⚡ Tự động (X API)", key="quick_switch_to_api"):
-                config.SEND_CHANNEL = "api"
-                st.session_state.send_channel = "api"
-                st.session_state.app_send_channel_radio = "api"
-                st.rerun()
+            st.button("Chuyển sang ⚡ Tự động (X API)", key="quick_switch_to_api", on_click=set_send_channel, args=("api",))
         else:
-            if st.button("Chuyển sang 🖐️ Thủ công ($0)", key="quick_switch_to_manual"):
-                config.SEND_CHANNEL = "manual"
-                st.session_state.send_channel = "manual"
-                st.session_state.app_send_channel_radio = "manual"
-                st.rerun()
+            st.button("Chuyển sang 🖐️ Thủ công ($0)", key="quick_switch_to_manual", on_click=set_send_channel, args=("manual",))
 
     approved = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
                     "WHERE m.status = 'approved' ORDER BY m.id")
