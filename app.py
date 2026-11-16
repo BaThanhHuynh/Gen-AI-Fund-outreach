@@ -81,7 +81,7 @@ with st.sidebar:
         key="app_workflow_mode",
         help="Chuyển giữa tìm người qua GitHub (0 USD, an toàn với nền tảng) và tìm người, gửi tin trực tiếp trên X."
     )
-    is_x_native = "X gốc" in mode or mode.startswith("⚡")
+    is_x_native = "X gốc" in mode
 
     st.markdown("---")
     st.subheader("KÊNH GỬI (SEND CHANNEL)")
@@ -102,7 +102,7 @@ with st.sidebar:
     selected_channel = st.radio(
         "Phương thức gửi tin",
         ["manual", "api"],
-        format_func=lambda c: "🖐️ Thủ công (Manual - $0)" if c == "manual" else "⚡ Tự động (X API v2)",
+        format_func=lambda c: "Thủ công (Manual - $0)" if c == "manual" else "Tự động (X API v2)",
         key="app_send_channel_radio",
         on_change=on_channel_radio_change,
         help="Thủ công: Tự copy tin nhắn và mở profile X để bấm gửi ($0, an toàn tuyệt đối). Tự động: Bắn trực tiếp qua X API (cần credit X)."
@@ -173,7 +173,7 @@ with find_tab:
             return [s.strip().lstrip("@") for s in raw.split(",") if s.strip()]
 
         if is_x_native:
-            st.markdown("##### ⚡ Tìm người trực tiếp trên X (bài đăng và tiểu sử)")
+            st.markdown("##### Tìm người trực tiếp trên X (bài đăng và tiểu sử)")
             st.caption("Tìm bài đăng gần đây của người làm AI/robot, xem các tài khoản X gốc đang theo dõi ai, "
                        "hoặc thêm tài khoản X có sẵn.")
             x_query = st.text_input("Câu tìm kiếm trên X (cú pháp của X: OR giữa các cụm từ)",
@@ -310,12 +310,12 @@ with send_tab:
     # Quick channel status and switcher
     col_mode_info, col_toggle = st.columns([3, 2])
     with col_mode_info:
-        st.markdown(f"**Kênh gửi đang chọn:** {'⚡ **Tự động (X API v2)**' if config.SEND_CHANNEL == 'api' else '🖐️ **Thủ công ($0 - Copy & Mở X)**'}")
+        st.markdown(f"**Kênh gửi đang chọn:** {'**Tự động (X API v2)**' if config.SEND_CHANNEL == 'api' else '**Thủ công ($0 - Copy & Mở X)**'}")
     with col_toggle:
         if config.SEND_CHANNEL == "manual":
-            st.button("Chuyển sang ⚡ Tự động (X API)", key="quick_switch_to_api", on_click=set_send_channel, args=("api",))
+            st.button("Chuyển sang Tự động (X API)", key="quick_switch_to_api", on_click=set_send_channel, args=("api",))
         else:
-            st.button("Chuyển sang 🖐️ Thủ công ($0)", key="quick_switch_to_manual", on_click=set_send_channel, args=("manual",))
+            st.button("Chuyển sang Thủ công ($0)", key="quick_switch_to_manual", on_click=set_send_channel, args=("manual",))
 
     approved = rows("SELECT m.id, m.text, p.x_username FROM messages m JOIN prospects p ON p.id = m.prospect_id "
                     "WHERE m.status = 'approved' ORDER BY m.id")
@@ -331,7 +331,7 @@ with send_tab:
                 st.caption(f"Không gửi được: {reason}")
             elif config.SEND_CHANNEL == "api":
                 c_s1, c_s2 = st.columns([2, 1])
-                if c_s1.button("⚡ Gửi qua X API", key=f"api_{mid}"):
+                if c_s1.button("Gửi qua X API", key=f"api_{mid}"):
                     try:
                         st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
                     except Exception as e:
@@ -344,7 +344,7 @@ with send_tab:
                 c_s1, c_s2 = st.columns([2, 1])
                 if c_s1.button("Bắt đầu gửi", key=f"start_{mid}"):
                     act(sender.open_manual, conn, mid)
-                if c_s2.button("⚡ Gửi qua X API", key=f"api_{mid}"):
+                if c_s2.button("Gửi qua X API", key=f"api_{mid}"):
                     try:
                         st.session_state.flash = f"@{m['x_username']}: {sender.send_api(conn, get_app_x(conn), mid)}"
                     except Exception as e:
@@ -374,9 +374,9 @@ with track_tab:
     c.metric("Tỉ lệ trả lời", f"{n_replied / n_sent:.0%}" if n_sent else "—")
 
     if is_x_native:
-        st.subheader("⚡ Tự lấy câu trả lời từ X")
+        st.subheader("Tự lấy câu trả lời từ X")
         st.caption("Đọc các tin nhắn riêng (DM) mới nhất qua X API để tự biết ai đã trả lời và cập nhật bảng theo dõi.")
-        if st.button("🔄 Lấy trả lời từ X", key="sync_x_replies_btn"):
+        if st.button("Lấy trả lời từ X", key="sync_x_replies_btn"):
             try:
                 res = x_sync.sync_x_replies(conn, get_app_x(conn))
                 if res.get("error"):
