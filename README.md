@@ -268,6 +268,8 @@ Nhắn tin làm quen người lạ (cold outreach) chạm tới luật của n�
 | `Không gửi được: not on SEND_ALLOWLIST (safety mode)` | Đang bật danh sách cho phép | Thêm tên X của người đó vào `SEND_ALLOWLIST` trong `.env`. |
 | `evidence not verified — edit the text first` | Câu trích không khớp nguyên văn với nguồn | Sửa bản nháp ở tab Duyệt tin cho khớp bằng chứng. |
 | `daily cap reached` | Đã chạm trần số tin trong 24 giờ | Chờ qua khung 24 giờ, hoặc chỉnh `DAILY_SEND_CAP` trong `.env`. |
+| `X_CLIENT_ID / X_CLIENT_SECRET are empty` | `.env` chưa có khoá OAuth của X App | Chép Client ID và Client Secret (mục *Keys and tokens* → OAuth 2.0 của App) vào `.env`, rồi chạy lại app. |
+| Trang X báo `You weren't able to give access to the App` | X App cài đặt sai | Trong *User authentication settings* của App: bật OAuth 2.0, loại *Web App*, quyền *Read and write and Direct message*, Callback URI đúng `http://127.0.0.1:8765/callback`. |
 | `streamlit is not recognized` | Chưa bật môi trường ảo | Chạy `.venv\Scripts\activate` (Windows) hoặc `source .venv/bin/activate` (macOS/Linux). |
 
 ---

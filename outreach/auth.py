@@ -119,6 +119,10 @@ def login(
         print(f"Connected as @{me_data['username']} (ID: {me_data['id']})\n")
         return me_data
 
+    if not config.X_CLIENT_ID or not config.X_CLIENT_SECRET:  # X only says "You weren't able to give access to the App"
+        raise AuthError("X_CLIENT_ID / X_CLIENT_SECRET are empty: copy your X app's OAuth 2.0 Client ID and "
+                        "Client Secret into .env, then restart the app")
+
     state = secrets.token_urlsafe(32)
     verifier, challenge = generate_pkce_pair()
     kv_set(conn, "pkce", {"state": state, "code_verifier": verifier})

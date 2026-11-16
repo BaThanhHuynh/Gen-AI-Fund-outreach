@@ -162,6 +162,17 @@ def test_login_fetches_and_returns_me(conn, monkeypatch):
     assert len(browser_opened) == 1
 
 
+def test_login_without_client_id_fails_before_opening_x(conn, monkeypatch):
+    """An empty X_CLIENT_ID makes X show 'You weren't able to give access to the App'; say why instead."""
+    monkeypatch.setattr(config, "X_MODE", "real")
+    monkeypatch.setattr(config, "X_CLIENT_ID", "")
+    opened = []
+    monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url))
+    with pytest.raises(AuthError, match="X_CLIENT_ID"):
+        login(conn)
+    assert opened == []
+
+
 def test_missing_oauth_token_raises_autherror(conn):
     """Calling XClient when not logged in (kv['oauth'] is empty) must raise AuthError."""
     client = XClient(conn)

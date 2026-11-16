@@ -40,7 +40,9 @@ chưa commit).
   người của chế độ kia; X Native bỏ qua `SEND_CHANNEL`; từ khoá rỗng cho truy vấn X rỗng.
 
 - 16/11/2026 (người dùng): README và nhãn `app.py` sang tiếng Việt; lý do chặn từ `outreach/` giữ tiếng Anh;
-  `docs/demo_script.md` đổi tên nút cho khớp. 149 test qua; chưa commit, chưa xem app bằng mắt.
+  `docs/demo_script.md` đổi tên nút cho khớp. Đã commit `1d04121`.
+- 16/11/2026: «Kết nối tài khoản X» lỗi trên trang X vì `.env` để trống `X_CLIENT_ID`/`X_CLIENT_SECRET`. `auth.login`
+  giờ báo lỗi trước khi mở X; README thêm 2 dòng gỡ lỗi; 150 test. Còn nợ: người dùng điền khoá.
 
 ## Câu hỏi còn mở
 - `gd-6-ra-soat.md`: bảng hồ sơ ở tab Find vẫn có liên kết X (Claude tự quyết theo kế hoạch). Người dùng muốn bỏ thì
