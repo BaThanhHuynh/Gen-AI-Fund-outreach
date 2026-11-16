@@ -165,7 +165,9 @@ def test_x_native_mode_smoke(tmp_path, monkeypatch):
     at.text_area(key="c_context").input("GenAI Fund exploring AI teams.")
     at.button(key="c_create").click().run()
 
-    # Search on X
+    # Search on X: the box is prefilled with an X query, not the raw comma list
+    assert at.text_input(key="x_search_q").value == \
+        '("robotics" OR "embodied AI" OR "robot learning") -is:retweet'
     at.button(key="x_search").click().run()
     assert not at.exception
 
@@ -214,3 +216,17 @@ def test_x_native_mode_smoke(tmp_path, monkeypatch):
     assert m["replied_at"] is not None
     assert "Excited to connect" in m["reply_text"]
     conn.close()
+
+
+def test_x_sync_failure_shows_error_not_traceback(tmp_path, monkeypatch):
+    from outreach import x_sync
+
+    def boom(conn, x):
+        raise RuntimeError("X is down")
+
+    monkeypatch.setattr(x_sync, "sync_x_replies", boom)
+    at = _app(tmp_path, monkeypatch).run()
+    at.radio(key="app_workflow_mode").set_value("⚡ X Native Mode (Official Take-Home Spec)").run()
+    at.button(key="sync_x_replies_btn").click().run()
+    assert not at.exception
+    assert any("X is down" in e.value for e in at.error)

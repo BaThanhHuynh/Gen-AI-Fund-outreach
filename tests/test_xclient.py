@@ -502,6 +502,19 @@ def test_user_posts_excludes_replies_and_retweets(conn):
     assert spend_since(conn, "1970-01-01T00:00:00+00:00") == pytest.approx(0.005)
 
 
+def test_user_posts_asks_at_least_x_minimum_of_5(conn):
+    """X rejects max_results < 5 on /users/:id/tweets with 400; callers asking for fewer must still get posts."""
+    kv_set(conn, "oauth", {"access_token": "tok", "refresh_token": "ref", "expires_at": time.time() + 3600})
+
+    def mock_handler(request: httpx.Request) -> httpx.Response:
+        if int(request.url.params["max_results"]) < 5:
+            return httpx.Response(400, json={"detail": "max_results must be between 5 and 100"})
+        return httpx.Response(200, json={"data": []})
+
+    client = XClient(conn, transport=httpx.MockTransport(mock_handler))
+    assert client.user_posts("u10", max_results=2) == []
+
+
 def test_dm_events_with_endpoint(conn):
     """dm_events_with must retrieve conversation events with a participant."""
     kv_set(conn, "oauth", {"access_token": "tok", "refresh_token": "ref", "expires_at": time.time() + 3600})

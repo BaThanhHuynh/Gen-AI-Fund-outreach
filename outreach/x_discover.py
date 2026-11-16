@@ -5,6 +5,12 @@ from typing import Any
 from outreach.db import now
 
 
+def search_query(keywords: str) -> str:
+    """Campaign keywords "a, b c" -> X query; X reads spaces as AND, so join the phrases with OR."""
+    phrases = [k.strip() for k in keywords.split(",") if k.strip()]
+    return "(" + " OR ".join(f'"{p}"' for p in phrases) + ") -is:retweet"
+
+
 def _counts() -> dict[str, int]:
     return {"new": 0, "existing": 0, "checked": 0}
 

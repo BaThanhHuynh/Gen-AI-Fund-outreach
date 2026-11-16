@@ -29,6 +29,12 @@ def test_discover_by_x_search_and_score(conn, campaign_id):
     assert updated_p["fit_score"] is not None
 
 
+def test_search_query_ors_campaign_keywords():
+    # X treats spaces as AND, so a raw "a, b c" keyword list would need every word in one post
+    from outreach.x_discover import search_query
+    assert search_query("robotics, embodied AI, ") == '("robotics" OR "embodied AI") -is:retweet'
+
+
 def test_discover_by_x_seeds(conn, campaign_id):
     x = FakeXClient(conn)
     counts = discover_by_x_seeds(conn, x, campaign_id, ["alex_builder"], max_people=2)

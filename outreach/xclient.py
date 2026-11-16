@@ -257,7 +257,7 @@ class XClient:
     def user_posts(self, user_id: str, max_results: int = 5) -> list[dict[str, Any]]:
         """Get recent original posts from a user, excluding retweets and replies (min 5, max 100)."""
         params = {
-            "max_results": str(max_results),
+            "max_results": str(max(5, max_results)),  # X answers 400 below 5
             "exclude": "retweets,replies",
             "tweet.fields": "id,author_id,text,created_at",
         }

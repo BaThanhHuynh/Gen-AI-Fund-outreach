@@ -153,8 +153,8 @@ with find_tab:
         if is_x_native:
             st.markdown("##### ⚡ Direct Discovery on X (Tweets & Bios)")
             st.caption("Search recent builder tweets, discover who X seed accounts follow, or import X handles.")
-            x_query = st.text_input("Keywords on X (searches tweets & bios)",
-                                    value=camps[cid]["keywords"], key="x_search_q")
+            x_query = st.text_input("X search query (X search syntax: OR between phrases)",
+                                    value=x_discover.search_query(camps[cid]["keywords"]), key="x_search_q")
             col_x1, _ = st.columns([1, 1])
             if col_x1.button("Search on X", key="x_search"):
                 try:
@@ -354,9 +354,6 @@ with track_tab:
                     st.info(f"Checked {res['checked_events']} DM events. No new replies found.")
             except Exception as e:
                 st.error(f"Sync failed: {e}")
-                if hasattr(fake_x, "simulate_reply"):
-                    fake_x.simulate_reply(target["x_user_id"], "Excited to connect! Let's chat about AI & robotics.")
-                    st.success(f"Simulated an incoming reply from @{target['x_username']}. Now click 'Sync Replies from X'!")
 
     handles = {p["id"]: p["x_username"] for p in rows("SELECT id, x_username FROM prospects")}
     st.subheader("Needs attention")

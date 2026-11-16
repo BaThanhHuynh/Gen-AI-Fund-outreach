@@ -17,12 +17,13 @@ The brief's test is "if we can't use it to run outreach ourselves, it doesn't pa
   the tool provides a sidebar switcher:
   1. *GitHub Builder Mode ($0 & Safety):* The zero-cost, compliant path described above.
   2. *X Native Mode (Literal Spec):* Direct discovery via X tweet search and X seed accounts, quoting X posts verbatim,
-     automated X API sending, and automated DM inbox reply sync.
+     X API sending (allowlisted accounts only; anyone else is sent by hand), and DM inbox reply sync. Paid per call,
+     and so far run only on sample data and mocked X responses.
 
 ## Trade-offs
 
-- **$0 and compliance cost clicks:** copy, open, paste, send, confirm; replies are marked by hand, because reading
-  DMs through the API is paid.
+- **$0 and compliance cost clicks:** copy, open, paste, send, confirm; in GitHub mode replies are marked by hand,
+  because reading DMs through the API is paid.
 - **Reach:** only people who list an X handle on GitHub. In two real searches, 254 of 264 and 480 of 510 GitHub
   accounts checked had none. This is the design's biggest limit.
 - **Template drafts never invent anything but read alike;** the tool warns when two are nearly the same.
@@ -41,13 +42,14 @@ Cold outreach is a grey area on both platforms; the tool stays on the careful si
 
 ## What comes next
 
-X API search (`search_recent` exists, not wired in) and arXiv / OpenAlex discovery; reply detection; follow-ups a person
-schedules; multi-user deployment; a queued API send.
+A first run of X Native mode against the live X API; arXiv / OpenAlex discovery; follow-ups a person schedules;
+multi-user deployment; a queued API send.
 
 ## Cost
 
-$0 by default. The X API channel costs about $0.035 per message (user lookup $0.010 + conversation check $0.010 +
-send $0.015). Claude drafting is billed per token and logged in the `usage` table. The live run cost $0.00: the table
+$0 by default (GitHub mode). The X API channel costs about $0.035 per message (user lookup $0.010 + conversation
+check $0.010 + send $0.015). X Native mode, estimated from X's per-resource prices: about $0.15 per search, $0.035
+per account added, up to $1.00 per reply sync. Claude drafting is billed per token and logged in the `usage` table. The live run cost $0.00: the table
 stayed empty.
 
 ## How AI tools were used and checked
@@ -56,6 +58,6 @@ Claude wrote the plan and reviewed stages 1–2. Antigravity wrote stages 1–2b
 and each stage was reviewed by a fresh Claude subagent that had not written it: it read the diff and tried failure
 cases, and from stage 4 it also reran the tests with the network blocked. These reviews sent stage 2 back (its live
 check had not been run), caught a test that called the real network, and found 3 must-fix UI bugs, such as a second browser tab silently
-clearing a do-not-contact flag. Every code fix came with a test that failed first. 146 tests, none touching the network.
+clearing a do-not-contact flag. Every code fix came with a test that failed first. 149 tests, none touching the network.
 In the product, the evidence check and human approval keep model output from going out unchecked. The live run sent
 one real DM, to my own test account, which replied.
