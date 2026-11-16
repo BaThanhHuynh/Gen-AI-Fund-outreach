@@ -4,3 +4,7 @@ data/
 __pycache__/
 .pytest_cache/
 *.db
+docs/bao_cao/
+docs/knowledge/
+docs/quy_trinh_trien_khai.md
+docs/assignment.md
