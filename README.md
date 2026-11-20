@@ -1,9 +1,7 @@
-# GenAI Fund Outreach
+# X Social Outreach
 
 A local tool that finds people building AI and robotics in Southeast Asia, drafts a personal intro message for each one
 (quoting real evidence word for word), and sends it on X safely and within the platform's rules.
-
-Built for the **GenAI Fund Forward Deployed Engineer (FDE) take-home assignment**.
 
 > The app's interface is in Vietnamese. This README names each control exactly as it appears on screen, with an
 > English translation in parentheses the first time it appears.
